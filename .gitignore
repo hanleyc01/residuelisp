@@ -6,11 +6,5 @@ dist/
 wheels/
 *.egg-info
 
-# mypy
-.mypy_cache
-
 # Virtual environments
 .venv
-
-# VSCODE
-.vscode
