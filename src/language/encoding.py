@@ -2,6 +2,7 @@
 representaitons into vector-symbolic representations.
 """
 
+import sys
 from dataclasses import dataclass
 from enum import Enum, auto
 from typing import cast
@@ -28,7 +29,15 @@ class IntegerEncodingScheme(Enum):
 
 
 class CleanupMemory[T: (VSA[np.complex128], VSA[np.float64])]:
-    """A simple clean-up memory."""
+    """A simple clean-up memory.
+
+    Args:
+    -   vsa (type[VSA]): The VSA class you want to pass in to use as a
+            similarity comparison.
+    -   dim (int): The dimensionality of the vectors.
+    -   max_trace (int): The maximum amount of traces you want to
+            pre-allocate. This is used as the increment.
+    """
 
     vsa: type[T]
     memory_matrix: NDArray[np.float64] | NDArray[np.complex128]
@@ -61,7 +70,7 @@ class CleanupMemory[T: (VSA[np.complex128], VSA[np.float64])]:
         self.size += 1
 
         if name is not None:
-            print(f"stored {name} at row {self.size-1}")
+            print(f"stored {name} at row {self.size-1}", file=sys.stderr)
 
         return x
 
@@ -124,7 +133,7 @@ class EncodingEnvironment[T: (VSA[np.complex128], VSA[np.float64])]:
     """Class for representing the encoding environment.
 
     Args:
-        vsa (type[AnyVSA]): The type of the encoding environment, which
+        vsa (type[VSA]): The type of the encoding environment, which
             will determine what kind of vector-symbols are returned from the
             encoding function.
         dim (int): The dimensionality of the vector-symbols.
@@ -188,8 +197,8 @@ def encode_list_integer[T: (
     """Encode an integer as a list
 
     Args:
-        cont (str): The integer.
-        env (EncodingEnvironment): The encoding environment.
+    -   cont (str): The integer.
+    -   env (EncodingEnvironment): The encoding environment.
 
     Returns:
         An encoded integer using the list scheme.
@@ -213,7 +222,7 @@ def encode_list_integer[T: (
 
         base = env.codebook["nil"]
         for i in range(conti):
-            base = _cons(env.codebook["nil"], base, env)
+            base = make_cons(env.codebook["nil"], base, env)
 
         return base
 
@@ -233,8 +242,8 @@ def encode_atom[T: (
     otherwise create a new value and return that.
 
     Args:
-        cont (str): The atom string.
-        env (EncodingEnvironment): The encoding environment.
+    -   cont (str): The atom string.
+    -   env (EncodingEnvironment): The encoding environment.
 
     Returns:
         A vector symbol for that atom.
@@ -250,11 +259,23 @@ def encode_atom[T: (
         return new_symbol
 
 
-# Make a semantic pointer for tuples
-def _cons[T: (
+def make_cons[T: (
     VSA[np.complex128],
     VSA[np.float64],
 )](head: T, tail: T, env: EncodingEnvironment[T]) -> T:
+    """Make a semantic pointer to a tuple chunk.
+
+    Args:
+    -   head (VSA): The first element of the tuple.
+    -   tail (VSA): The second element of the tuple.
+    -   env (EncodingEnvironment): The encoding environment.
+
+    Returns:
+        A semantic pointer to the tuple chunk in associative memory.
+
+    Raises:
+        `EncodingError`.
+    """
     head_ = env.cleanup_memory.memorize(head).data
     tail_ = env.cleanup_memory.memorize(tail).data
 
@@ -295,10 +316,10 @@ def encode_list[T: (
     headv = encode(head, env)
 
     if len(tail) == 0:
-        return _cons(headv, env.codebook["nil"], env)
+        return make_cons(headv, env.codebook["nil"], env)
     else:
         tailv = encode_list(tail, env)
-        return _cons(headv, tailv, env)
+        return make_cons(headv, tailv, env)
 
 
 def encode[T: (
@@ -309,8 +330,8 @@ def encode[T: (
     architecture provided for as an argument to `Env`.
 
     Args:
-        intr (Intr): The intermediate source representation.
-        env (EncodingEnvironment): The encoding environment.
+    -   intr (Intr): The intermediate source representation.
+    -   env (EncodingEnvironment): The encoding environment.
 
     Returns:
         A vector symbolic representation of the intermediate syntax.

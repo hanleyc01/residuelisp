@@ -78,8 +78,8 @@ class Token:
     """Tagged union of tokens.
 
     Arguments:
-        cont (str): A string reference to the contents in the raw source.
-        kind (TokenKind): What kind of token it is.
+    -   cont (str): A string reference to the contents in the raw source.
+    -   kind (TokenKind): What kind of token it is.
     """
 
     cont: str
@@ -175,8 +175,8 @@ def _token(conts: "more_itertools.peekable[str]") -> Token | None:
 def lex(conts: str) -> Iterator[Token]:
     """Lex the contents of a raw source file to a string.
 
-    Arguments:
-        conts (str): The raw string source of scheme text.
+    Args:
+    -   conts (str): The raw string source of scheme text.
 
     Returns:
         An iterator of tokens.
@@ -387,7 +387,7 @@ def parse(toks: Iterator[Token]) -> Intr:
     """Parse an iterator of tokens.
 
     Arguments:
-        toks (Iterator[Token]): An iterator of tokens, typically returned from
+    -   toks (Iterator[Token]): An iterator of tokens, typically returned from
             `lex`.
 
     Returns:
