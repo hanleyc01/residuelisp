@@ -41,6 +41,6 @@ Secondly, the project is organized into a couple of directories:
 One thing about this project that differs from most I've seen is the heavy use
 of type-annotations. I'm sorry about if it gets a little unreadable. If you
 want to familiarize yourself with how to read them, and their benefits,
-see (PEP 484)[https://peps.python.org/pep-0484/], and the 
-Python (typing)[https://docs.python.org/3/library/typing.html] module 
+see [PEP 484](https://peps.python.org/pep-0484/), and the 
+Python [typing](https://docs.python.org/3/library/typing.html) module 
 documentation.
