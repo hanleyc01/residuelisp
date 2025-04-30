@@ -4,6 +4,7 @@ representaitons into vector-symbolic representations.
 
 from dataclasses import dataclass
 from enum import Enum, auto
+from typing import cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -26,17 +27,17 @@ class IntegerEncodingScheme(Enum):
     RHCIntegers = auto()
 
 
-class CleanupMemory:
+class CleanupMemory[T: (VSA[np.complex128], VSA[np.float64])]:
     """A simple clean-up memory."""
 
-    vsa: type[AnyVSA]
-    memory_matrix: NDArray[np.float64] | NDArray[np.complex64]
+    vsa: type[T]
+    memory_matrix: NDArray[np.float64] | NDArray[np.complex128]
     dim: int
     max_trace: int
     incr: int
     size: int
 
-    def __init__(self, vsa: type[AnyVSA], dim: int, max_trace: int = 100) -> None:
+    def __init__(self, vsa: type[T], dim: int, max_trace: int = 100) -> None:
         self.vsa = vsa
         self.dim = dim
         self.max_trace = max_trace
@@ -47,9 +48,9 @@ class CleanupMemory:
         if vsa == HRR:
             self.memory_matrix = np.zeros((max_trace, dim))
         elif vsa == FHRR or vsa == RHC:
-            self.memory_matrix = np.zeros((max_trace, dim), dtype=complex)
+            self.memory_matrix = np.zeros((max_trace, dim), dtype=np.complex128)
 
-    def memorize(self, x: AnyVSA, name: str | None = None) -> AnyVSA:
+    def memorize(self, x: T, name: str | None = None) -> T:
         if self.size >= self.max_trace:
             self.memory_matrix = np.concatenate(
                 [self.memory_matrix, np.zeros((self.incr, self.dim))], axis=0
@@ -64,30 +65,33 @@ class CleanupMemory:
 
         return x
 
-    def recall(self, x: AnyVSA) -> AnyVSA:
-        # type system here is freaking out because we pass a module in as an
-        # argument, and there's no way to have dependent modules, or types,
-        # for that matter, in python. so please: use this safely...
-        assert type(x) == self.vsa and x.data.dtype == self.memory_matrix.dtype
-        activations = [self.vsa.similarity(x.data, m) for m in self.memory_matrix]  # type: ignore
+    def recall(self, x: T) -> T:
+        # activations = [self.vsa.similarity(x.data, m) for m in self.memory_matrix]
+        activations = []
+        for m in self.memory_matrix:
+            if x.data.dtype == m.dtype:
+                sim = self.vsa.similarity(x.data, m)
+            else:
+                raise ValueError("Unexpected dtype for VSA")
+            activations.append(sim)
         return self.vsa.from_array(self.memory_matrix[np.argmax(activations), :])  # type: ignore
 
 
-class AssociativeMemory:
+class AssociativeMemory[T: (VSA[np.complex128], VSA[np.float64])]:
     """Associative memory used for semantic pointers."""
 
-    vsa: type[AnyVSA]
+    vsa: type[T]
     dim: int
-    assoc: dict[AnyVSA, AnyVSA]
+    assoc: dict[T, T]
     _theta: float
 
-    def __init__(self, vsa: type[AnyVSA], dim: int) -> None:
+    def __init__(self, vsa: type[T], dim: int) -> None:
         self.vsa = vsa
         self.assoc = {}
         self._theta = 0.2
         self.dim = dim
 
-    def alloc(self, trace: AnyVSA) -> AnyVSA:
+    def alloc(self, trace: T) -> T:
         """Allocate trace into the associative memory, assigning it a new
         semantic pointer, and returning back that pointer.
         """
@@ -95,7 +99,7 @@ class AssociativeMemory:
         self.assoc[ptr] = trace
         return ptr
 
-    def deref(self, ptr: AnyVSA) -> AnyVSA | None:
+    def deref(self, ptr: T) -> T | None:
         """Dereference a semantic pointer, returning none if the dictionary
         is empty.
         """
@@ -107,7 +111,7 @@ class AssociativeMemory:
             return trace
 
         keys = list(self.assoc.keys())
-        acts = [self.vsa.similarity(ptr.data, key.data) for key in keys]  # type: ignore
+        acts = [self.vsa.similarity(ptr.data, key.data) for key in keys]
         nearest_index = np.argmax(acts)
 
         if (acts[nearest_index]) > self._theta:
@@ -116,30 +120,7 @@ class AssociativeMemory:
         return None
 
 
-# initial codebook with constants
-def _initial_codebook(vsa: type[AnyVSA], dim: int) -> dict[str, AnyVSA]:
-    codebook = {}
-
-    for keyword in KEYWORDS.keys():
-        codebook[keyword] = vsa.new(dim)
-
-    for operator in OPERATORS.keys():
-        codebook[operator] = vsa.new(dim)
-
-    for value in VALUES.keys():
-        codebook[value] = vsa.new(dim)
-
-    codebook["__phi"] = vsa.new(dim)
-    codebook["__lhs"] = vsa.new(dim)
-    codebook["__rhs"] = vsa.new(dim)
-    codebook["__args"] = vsa.new(dim)
-    codebook["__body"] = vsa.new(dim)
-    codebook["__func"] = vsa.new(dim)
-
-    return codebook
-
-
-class EncodingEnvironment:
+class EncodingEnvironment[T: (VSA[np.complex128], VSA[np.float64])]:
     """Class for representing the encoding environment.
 
     Args:
@@ -149,25 +130,48 @@ class EncodingEnvironment:
         dim (int): The dimensionality of the vector-symbols.
     """
 
-    vsa: type[AnyVSA]
+    vsa: type[T]
     dim: int
-    codebook: dict[str, AnyVSA]
-    cleanup_memory: CleanupMemory
-    associative_memory: AssociativeMemory
+    codebook: dict[str, T]
+    cleanup_memory: CleanupMemory[T]
+    associative_memory: AssociativeMemory[T]
     integer_encoding_scheme: IntegerEncodingScheme
 
     def __init__(
         self,
-        vsa: type[AnyVSA],
+        vsa: type[T],
         dim: int,
         integer_encoding_scheme: IntegerEncodingScheme,
     ) -> None:
         self.vsa = vsa
         self.dim = dim
-        self.codebook = _initial_codebook(self.vsa, self.dim)
+        self.codebook = EncodingEnvironment.initial_codebook(self.vsa, self.dim)
         self.cleanup_memory = CleanupMemory(self.vsa, self.dim)
         self.associative_memory = AssociativeMemory(self.vsa, self.dim)
         self.integer_encoding_scheme = integer_encoding_scheme
+
+    # initial codebook with constants
+    @staticmethod
+    def initial_codebook(vsa: type[T], dim: int) -> dict[str, T]:
+        codebook = {}
+
+        for keyword in KEYWORDS.keys():
+            codebook[keyword] = vsa.new(dim)
+
+        for operator in OPERATORS.keys():
+            codebook[operator] = vsa.new(dim)
+
+        for value in VALUES.keys():
+            codebook[value] = vsa.new(dim)
+
+        codebook["__phi"] = vsa.new(dim)
+        codebook["__lhs"] = vsa.new(dim)
+        codebook["__rhs"] = vsa.new(dim)
+        codebook["__args"] = vsa.new(dim)
+        codebook["__body"] = vsa.new(dim)
+        codebook["__func"] = vsa.new(dim)
+
+        return codebook
 
 
 @dataclass
@@ -177,7 +181,10 @@ class EncodingError(Exception):
     msg: str
 
 
-def encode_list_integer(cont: str, env: EncodingEnvironment) -> AnyVSA:
+def encode_list_integer[T: (
+    VSA[np.complex128],
+    VSA[np.float64],
+)](cont: str, env: EncodingEnvironment[T]) -> T:
     """Encode an integer as a list
 
     Args:
@@ -211,11 +218,17 @@ def encode_list_integer(cont: str, env: EncodingEnvironment) -> AnyVSA:
         return base
 
 
-def encode_rhc_integer(cont: str, env: EncodingEnvironment) -> AnyVSA:
+def encode_rhc_integer[T: (
+    VSA[np.complex128],
+    VSA[np.float64],
+)](cont: str, env: EncodingEnvironment[T]) -> T:
     raise EncodingError("TODO")
 
 
-def encode_atom(cont: str, env: EncodingEnvironment) -> AnyVSA:
+def encode_atom[T: (
+    VSA[np.complex128],
+    VSA[np.float64],
+)](cont: str, env: EncodingEnvironment[T]) -> T:
     """Encode an atom. If the atom is already present, return that value,
     otherwise create a new value and return that.
 
@@ -238,26 +251,29 @@ def encode_atom(cont: str, env: EncodingEnvironment) -> AnyVSA:
 
 
 # Make a semantic pointer for tuples
-def _cons(head: AnyVSA, tail: AnyVSA, env: EncodingEnvironment) -> AnyVSA:
+def _cons[T: (
+    VSA[np.complex128],
+    VSA[np.float64],
+)](head: T, tail: T, env: EncodingEnvironment[T]) -> T:
     head_ = env.cleanup_memory.memorize(head).data
     tail_ = env.cleanup_memory.memorize(tail).data
 
     tuplev = env.vsa.bundle(
-        env.vsa.bind(head_, env.codebook["__lhs"].data),  # type: ignore
-        env.vsa.bundle(  # type: ignore
-            env.vsa.bind(tail_, env.codebook["__rhs"].data),  # type: ignore
-            env.codebook["__phi"].data,  # type: ignore
+        env.vsa.bind(head_, env.codebook["__lhs"].data),
+        env.vsa.bundle(
+            env.vsa.bind(tail_, env.codebook["__rhs"].data),
+            env.codebook["__phi"].data,
         ),
     )
 
-    ptr = env.associative_memory.alloc(env.vsa.from_array(tuplev))  # type: ignore
+    ptr = env.associative_memory.alloc(env.vsa.from_array(tuplev))
     return ptr
 
 
-def encode_list(
-    xs: list[Intr],
-    env: EncodingEnvironment,
-) -> AnyVSA:
+def encode_list[T: (
+    VSA[np.complex128],
+    VSA[np.float64],
+)](xs: list[Intr], env: EncodingEnvironment[T],) -> T:
     """Encode a list as a vector symbol.
 
     Args:
@@ -285,10 +301,10 @@ def encode_list(
         return _cons(headv, tailv, env)
 
 
-def encode(
-    intr: Intr,
-    env: EncodingEnvironment,
-) -> AnyVSA:
+def encode[T: (
+    VSA[np.complex128],
+    VSA[np.float64],
+)](intr: Intr, env: EncodingEnvironment[T],) -> T:
     """Encode an intermediate representation into the vector-symbolic
     architecture provided for as an argument to `Env`.
 
