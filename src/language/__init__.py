@@ -1,11 +1,11 @@
 """Module containing both the encoding functions as well as the interpretation
-functions. 
+functions.
 
 ## Encoding
 
-The main way to interact with the `.encoding` module is to call `.encoding.encode` 
-the result of `syntax.parser.parse`. These are `syntax.parser.Intr`, or, 
-intermediate representations. To call encode, we need to specify an 
+The main way to interact with the `.encoding` module is to call `.encoding.encode`
+the result of `syntax.parser.parse`. These are `syntax.parser.Intr`, or,
+intermediate representations. To call encode, we need to specify an
 `.encoding.EncodingEnvironment`.
 
 The encoding scheme for integers used is given to the environment using
@@ -26,5 +26,6 @@ encode(intr, env)
 
 The module for interpretation is `.interpreter`.
 """
+
 from .encoding import *
 from .interpreter import *

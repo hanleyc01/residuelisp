@@ -132,19 +132,83 @@ def cdr[T: (
     )
 
 
+def make_function_pointer[T: (
+    VSA[np.complex128],
+    VSA[np.float64],
+)](
+    args: T, body: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
+) -> T:
+    """Allocate a semantic function pointer for the arguments and the body.
+
+    The structure of the chunk to which the semantic pointer points to is
+    similar to the structure of a tuple chunk. We bind together
+    `args` with the reserved symbol, `__args`
+    (see `language.encoding.EncodingEnvironment.initial_codebook` for the
+    other reserved symbols). We the bundle this with the function body,
+    where the function body is binded to the symbol `__body`. Finally,
+    the symbols are bundled with the `__func` function symbol.
+
+    Args:
+    -   args (VSA): A vector-symbol representing the arguments as a list.
+    -   body (VSA): A vector-symbol representing the unevaluated function body.
+    -   enc_env (EncodingEnvironment): The encoding environment.
+    -   eval_env (EvalEnvironment): The evaluation environment.
+
+    Returns:
+        A semantic pointer in the encoding environment that points to a
+        function body chunk.
+    """
+    tagged_args = enc_env.vsa.bind(args.data, enc_env.codebook["__args"].data)
+    tagged_body = enc_env.vsa.bind(body.data, enc_env.codebook["__body"].data)
+    function_tag = enc_env.codebook["__func"].data
+    chunk = enc_env.vsa.bundle(
+        tagged_args, enc_env.vsa.bundle(tagged_body, function_tag)
+    )
+    ptr = enc_env.associative_memory.alloc(enc_env.vsa.from_array(chunk))
+    return ptr
+
+
 def evaluate_lambda[T: (
     VSA[np.complex128],
     VSA[np.float64],
 )](
     function_body: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
 ) -> T:
-    raise Exception("TODO")
+    """Evaluate a lambda expression, converting it into a semantic function
+    pointer. For more information about the layout of a semantic function 
+    pointer, see `.interpreter.make_function_pointer`.
+
+    Args:
+    -   function_body (VSA): The function body of the lambda.
+    -   enc_env (EncodingEnvironment): The encoding environment.
+    -   eval_env (EvalEnvironment): The evaluation environment.
+
+    Returns:
+        A semantic function pointer in `enc_env.associative_memory` which 
+        points to a function chunk.
+    """
+    args = car(function_body, enc_env, eval_env)
+    body = cdr(function_body, enc_env, eval_env)
+    return make_function_pointer(args, body, enc_env, eval_env)
 
 
 def evaluate_define[T: (
     VSA[np.complex128],
     VSA[np.float64],
 )](define_body: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+    """Evaluate a definition, associates a value to a name in `eval_env`.
+
+    Args:
+    -   define_body (VSA): A vector-symbol representing the definition body.
+    -   enc_env (EncodingEnvironment): The encoding environment.
+    -   eval_env (EvalEnvironment): The evaluation environment.
+
+    Returns:
+        A `nil` value, as per the specification.
+
+    Raises:
+        `InterpreterError`.
+    """
     raise Exception("TODO")
 
 
@@ -154,6 +218,23 @@ def evaluate_application[T: (
 )](
     rator: T, rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
 ) -> T:
+    """Evaluate an application of either a built-in function or a user-defined
+    semantic function pointer.
+
+    Args:
+    -   rator (VSA): The ope*rator* of the application.
+    -   rand (VSA): A, possibly empty, list of arguments to pass to the operator.
+            stands for ope*rand*.
+    -   enc_env (EncodingEnvironment): The encoding environment.
+    -   eval_env (EvalEnvironment): The evaluation environment.
+
+    Returns:
+        A vector symbol which is the result of the application of the operator
+        to the operands.
+
+    Raises:
+        `InterpreterError`.
+    """
     raise Exception("TODO")
 
 
