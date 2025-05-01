@@ -9,7 +9,7 @@ from typing import Any
 import numpy as np
 
 from syntax import lex, parse
-from vsa import VSA, AnyVSA, VSAdtype
+from vsa import VSA
 
 from .encoding import (AssociativeMemory, EncodingEnvironment,
                        IntegerEncodingScheme, encode, make_cons)
@@ -175,7 +175,7 @@ def evaluate_lambda[T: (
     function_body: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
 ) -> T:
     """Evaluate a lambda expression, converting it into a semantic function
-    pointer. For more information about the layout of a semantic function 
+    pointer. For more information about the layout of a semantic function
     pointer, see `.interpreter.make_function_pointer`.
 
     Args:
@@ -184,7 +184,7 @@ def evaluate_lambda[T: (
     -   eval_env (EvalEnvironment): The evaluation environment.
 
     Returns:
-        A semantic function pointer in `enc_env.associative_memory` which 
+        A semantic function pointer in `enc_env.associative_memory` which
         points to a function chunk.
     """
     args = car(function_body, enc_env, eval_env)
@@ -238,6 +238,19 @@ def evaluate_application[T: (
     Raises:
         `InterpreterError`.
     """
+
+    operator_v: T
+    if (eval_env.locals_ is not None) and (
+        mayb_local_val := eval_env.locals_.deref(rator)
+    ) is not None:
+        operator_v = mayb_local_val
+    elif (mayb_define_val := eval_env.define_mem.deref(rator)) is not None:
+        operator_v = mayb_define_val
+    else:
+        operator_v = enc_env.cleanup_memory.recall(rator)
+
+    
+
     raise Exception("TODO")
 
 

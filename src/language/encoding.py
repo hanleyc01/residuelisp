@@ -40,11 +40,21 @@ class CleanupMemory[T: (VSA[np.complex128], VSA[np.float64])]:
     """
 
     vsa: type[T]
+    """The vector symbolic architecture class that will be used for
+    comparison.
+    """
     memory_matrix: NDArray[np.float64] | NDArray[np.complex128]
+    """The raw memory matrix."""
     dim: int
+    """The dimensionality of the memory."""
     max_trace: int
+    """The maximum amount of traces initially pre-allocated."""
     incr: int
+    """The increment by which the memory will be increased by, assigned to
+    the value of `max_trace`.
+    """
     size: int
+    """The current number of items in memory."""
 
     def __init__(self, vsa: type[T], dim: int, max_trace: int = 100) -> None:
         self.vsa = vsa
@@ -60,6 +70,16 @@ class CleanupMemory[T: (VSA[np.complex128], VSA[np.float64])]:
             self.memory_matrix = np.zeros((max_trace, dim), dtype=np.complex128)
 
     def memorize(self, x: T, name: str | None = None) -> T:
+        """Memorize a value into the cleanup memory.
+
+        Args:
+        -   x (VSA): A vector-symbol.
+        -   name (str | None): Defaults to `None`, if not `None`, then
+            will print debug information about storing the value in memory.
+
+        Returns:
+            The vector symbol `x` passed.
+        """
         if self.size >= self.max_trace:
             self.memory_matrix = np.concatenate(
                 [self.memory_matrix, np.zeros((self.incr, self.dim))], axis=0
@@ -75,14 +95,15 @@ class CleanupMemory[T: (VSA[np.complex128], VSA[np.float64])]:
         return x
 
     def recall(self, x: T) -> T:
-        # activations = [self.vsa.similarity(x.data, m) for m in self.memory_matrix]
-        activations = []
-        for m in self.memory_matrix:
-            if x.data.dtype == m.dtype:
-                sim = self.vsa.similarity(x.data, m)
-            else:
-                raise ValueError("Unexpected dtype for VSA")
-            activations.append(sim)
+        """Recall a value in the cleanup memory.
+
+        Args:
+        -   x (VSA): A vector-symbol to recall.
+
+        Returns:
+            The recalled trace.
+        """
+        activations = [self.vsa.similarity(x.data, m) for m in self.memory_matrix]
         return self.vsa.from_array(self.memory_matrix[np.argmax(activations), :])  # type: ignore
 
 
@@ -137,10 +158,10 @@ class EncodingEnvironment[T: (VSA[np.complex128], VSA[np.float64])]:
     """Class for representing the encoding environment.
 
     Args:
-        vsa (type[VSA]): The type of the encoding environment, which
+    -   vsa (type[VSA]): The type of the encoding environment, which
             will determine what kind of vector-symbols are returned from the
             encoding function.
-        dim (int): The dimensionality of the vector-symbols.
+    -   dim (int): The dimensionality of the vector-symbols.
     """
 
     vsa: type[T]
