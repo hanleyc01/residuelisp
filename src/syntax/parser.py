@@ -44,6 +44,8 @@ class TokenKind(Enum):
     Eq = auto()
     Atom = auto()
     Quote = auto()
+    Car = auto()
+    Cdr = auto()
 
     def __str__(self) -> str:
         return self.name
@@ -54,6 +56,8 @@ KEYWORDS = {
     "lambda": TokenKind.Lambda,
     "and": TokenKind.And,
     "or": TokenKind.Or,
+    "car": TokenKind.Car,
+    "cdr": TokenKind.Cdr,
     "cons": TokenKind.Cons,
     "nil": TokenKind.Nil,
     "not": TokenKind.Not,

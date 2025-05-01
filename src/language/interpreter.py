@@ -46,7 +46,8 @@ def is_approx_eq[T: (
 )](x: T, y: T, env: EncodingEnvironment[T], floor: float = 0.2) -> bool:
     """Approximate equality between two vector symbols."""
     print("is_approx_eq call", file=sys.stderr)
-    similarity = env.vsa.similarity(x.data, y.data)
+    similarity = abs(env.vsa.similarity(x.data, y.data))
+    print(f"\tsimilarity = {similarity}", file=sys.stderr)
     return similarity > floor
 
 
@@ -140,11 +141,8 @@ def car[T: (
     if value is None:
         raise InterpreterError("Segmentation fault in car hehe")
 
-    return enc_env.cleanup_memory.recall(
-        enc_env.vsa.from_array(
-            enc_env.vsa.unbind(value.data, enc_env.codebook["__lhs"].data)
-        )
-    )
+    slot = enc_env.vsa.unbind(value.data, enc_env.codebook["__lhs"].data)
+    return enc_env.cleanup_memory.recall(enc_env.vsa.from_array(slot))
 
 
 def cdr[T: (
@@ -170,11 +168,8 @@ def cdr[T: (
     if value is None:
         raise InterpreterError("Segmentation fault in cdr hehe")
 
-    return enc_env.cleanup_memory.recall(
-        enc_env.vsa.from_array(
-            enc_env.vsa.unbind(value.data, enc_env.codebook["__rhs"].data)
-        )
-    )
+    slot = enc_env.vsa.unbind(value.data, enc_env.codebook["__rhs"].data)
+    return enc_env.cleanup_memory.recall(enc_env.vsa.from_array(slot))
 
 
 def cons[T: (
@@ -222,6 +217,80 @@ def eq[T: (
     Raises:
         `InterpreterError`.
     """
+    raise Exception("TODO")
+
+
+def atom[T: (
+    VSA[np.complex128],
+    VSA[np.float64],
+)](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+    """Test whether the operand is an atomic value or not.
+
+    Args:
+    -   rand (VSA): A vector-symbol list representing the arguments.
+    -   enc_env (EncodingEnvironment): The encoding environment.
+    -   eval_env (EvalEnvironment): The evaluation environment.
+
+    Returns:
+        True if the value is indeed atomic, false otherwise.
+
+    Raises:
+        `InterpreterError`.
+    """
+    raise Exception("TODO")
+
+
+def if_[T: (
+    VSA[np.complex128],
+    VSA[np.float64],
+)](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+    """Conditional evaluation of the branches. Tests the condition as to
+    whether or not it is true, and the exectutes the second argument if the
+    result is true. Otherwise, executes the third argument.
+
+    Args:
+    -   rand (VSA): A vector-symbol list representing the arguments.
+    -   enc_env (EncodingEnvironment): The encoding environment.
+    -   eval_env (EvalEnvironment): The evaluation environment.
+
+    Returns:
+        The result of the branch taken.
+
+    Raises:
+        `InterpreterError`.
+    """
+    raise Exception("TODO")
+
+
+def add[T: (
+    VSA[np.complex128],
+    VSA[np.float64],
+)](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+    """ """
+    raise Exception("TODO")
+
+
+def sub[T: (
+    VSA[np.complex128],
+    VSA[np.float64],
+)](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+    """ """
+    raise Exception("TODO")
+
+
+def mul[T: (
+    VSA[np.complex128],
+    VSA[np.float64],
+)](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+    """ """
+    raise Exception("TODO")
+
+
+def div[T: (
+    VSA[np.complex128],
+    VSA[np.float64],
+)](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+    """ """
     raise Exception("TODO")
 
 
@@ -362,18 +431,25 @@ def evaluate_application[T: (
         return cons(rand, enc_env, eval_env)
     elif is_approx_eq(operator_v, enc_env.codebook["eq?"], enc_env):
         print("closest to `eq?`", file=sys.stderr)
+        return eq(rand, enc_env, eval_env)
     elif is_approx_eq(operator_v, enc_env.codebook["atom?"], enc_env):
         print("closest to `atom?`", file=sys.stderr)
+        return atom(rand, enc_env, eval_env)
     elif is_approx_eq(operator_v, enc_env.codebook["if"], enc_env):
         print("closest to `if`", file=sys.stderr)
+        return if_(rand, enc_env, eval_env)
     elif is_approx_eq(operator_v, enc_env.codebook["+"], enc_env):
         print("closest to `+`", file=sys.stderr)
+        return add(rand, enc_env, eval_env)
     elif is_approx_eq(operator_v, enc_env.codebook["-"], enc_env):
         print("closest to `-`", file=sys.stderr)
+        return sub(rand, enc_env, eval_env)
     elif is_approx_eq(operator_v, enc_env.codebook["*"], enc_env):
         print("closest to `*`", file=sys.stderr)
+        return mul(rand, enc_env, eval_env)
     elif is_approx_eq(operator_v, enc_env.codebook["/"], enc_env):
         print("closest to `/`", file=sys.stderr)
+        return div(rand, enc_env, eval_env)
     elif is_approx_eq(
         check_function(operator_v, enc_env), enc_env.codebook["#t"], enc_env
     ):
@@ -404,8 +480,10 @@ def evaluate[T: (
     """
     print("evaluate call", file=sys.stderr)
     if is_approx_eq(check_atomic(expr, enc_env), enc_env.codebook["#t"], enc_env):
-        print("expression is an atom", file=sys.stderr)
+        print("\texpression is an atom", file=sys.stderr)
 
+        # TODO: fix this to check first locals if available, then
+        # fall through to define
         if eval_env.locals_ is None:
             res = eval_env.define_mem.deref(expr)
             if res is None:
@@ -419,6 +497,7 @@ def evaluate[T: (
                 return expr
             return res
 
+    print("\texpression is non-atomic", file=sys.stderr)
     head, tail = car(expr, enc_env, eval_env), cdr(expr, enc_env, eval_env)
 
     if is_approx_eq(head, enc_env.codebook["lambda"], enc_env):

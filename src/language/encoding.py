@@ -213,7 +213,8 @@ class EncodingEnvironment[T: (VSA[np.complex128], VSA[np.float64])]:
             will determine what kind of vector-symbols are returned from the
             encoding function.
     -   dim (int): The dimensionality of the vector-symbols.
-    -   integer_encoding_scheme (IntegerEncodingScheme)
+    -   integer_encoding_scheme (IntegerEncodingScheme): Defaults to
+        `IntegerEncodingScheme.ListIntegers`.
     """
 
     vsa: type[T]
@@ -227,7 +228,7 @@ class EncodingEnvironment[T: (VSA[np.complex128], VSA[np.float64])]:
         self,
         vsa: type[T],
         dim: int,
-        integer_encoding_scheme: IntegerEncodingScheme,
+        integer_encoding_scheme: IntegerEncodingScheme = IntegerEncodingScheme.ListIntegers,
     ) -> None:
         self.vsa = vsa
         self.dim = dim
@@ -397,8 +398,8 @@ def encode_list[T: (
     """Encode a list as a vector symbol.
 
     Args:
-        xs (list[Intr]): A list of intermediate representations.
-        env (EncodingEnvironment): The encoding environment.
+    -   xs (list[Intr]): A list of intermediate representations.
+    -   env (EncodingEnvironment): The encoding environment.
 
     Returns:
         A semantic pointer that, when dereferenced using the associative

@@ -83,3 +83,23 @@ def test_or() -> None:
 
 def test_not() -> None:
     assert token_eq("not", TokenKind.Not)
+
+
+def test_eq() -> None:
+    assert token_eq("eq?", TokenKind.Eq)
+
+
+def test_atom() -> None:
+    assert token_eq("atom?", TokenKind.Atom)
+
+
+def test_quote() -> None:
+    assert token_eq("quote", TokenKind.Quote)
+
+
+def test_car() -> None:
+    assert token_eq("car", TokenKind.Car)
+
+
+def test_cdr() -> None:
+    assert token_eq("cdr", TokenKind.Cdr)
