@@ -199,6 +199,9 @@ class EncodingEnvironment[T: (VSA[np.complex128], VSA[np.float64])]:
         self.associative_memory = AssociativeMemory(self.vsa, self.dim)
         self.integer_encoding_scheme = integer_encoding_scheme
 
+        for key, value in self.codebook.items():
+            self.cleanup_memory.memorize(value, name=key)
+
     # initial codebook with constants
     @staticmethod
     def initial_codebook(vsa: type[T], dim: int) -> dict[str, T]:

@@ -53,12 +53,7 @@ def is_approx_eq[T: (
 def check_atomic[T: (
     VSA[np.complex128],
     VSA[np.float64],
-)](
-    expr: T,
-    enc_env: EncodingEnvironment[T],
-    eval_env: EvalEnvironment[T],
-    floor: float = 0.2,
-) -> T:
+)](expr: T, enc_env: EncodingEnvironment[T], floor: float = 0.2,) -> T:
     """Determine whether or not a value is an atomic value or a list."""
     print("check_atomic_call", file=sys.stderr)
     value = enc_env.associative_memory.deref(expr)
@@ -86,12 +81,7 @@ def check_atomic[T: (
 def check_function[T: (
     VSA[np.complex128],
     VSA[np.float64],
-)](
-    expr: T,
-    enc_env: EncodingEnvironment[T],
-    eval_env: EvalEnvironment[T],
-    floor: float = 0.2,
-) -> T:
+)](expr: T, enc_env: EncodingEnvironment[T], floor: float = 0.2,) -> T:
     """Determine whether or not a value is a function by checking for the
     special function symbol. This involves dereferencing the function as a
     semantic function pointer, and inspecting the contents at the memory slot.
@@ -99,7 +89,6 @@ def check_function[T: (
     Args:
     -   expr (VSA): An expression that is treated as a semantic pointer.
     -   enc_env (EncodingEnvironment): The encoding environment.
-    -   eval_env (EvalEnvironment): The evaluation environment.
     -   floor (float): Comparison floor, defaults to `0.2`.
 
     Returns:
@@ -123,9 +112,9 @@ def check_function[T: (
         * enc_env.codebook["#f"].data
     )
 
-    return enc_env.cleanup_memory.recall(
-        enc_env.vsa.from_array(enc_env.vsa.bundle(close_to___func, far_from___func))
-    )
+    bundled_result = enc_env.vsa.bundle(close_to___func, far_from___func)
+    cleanuped = enc_env.cleanup_memory.recall(enc_env.vsa.from_array(bundled_result))
+    return cleanuped
 
 
 def car[T: (
@@ -330,7 +319,7 @@ def evaluate_application[T: (
     elif is_approx_eq(operator_v, enc_env.codebook["/"], enc_env):
         print("closest to `/`", file=sys.stderr)
     elif is_approx_eq(
-        check_function(operator_v, enc_env, eval_env), enc_env.codebook["#t"], enc_env
+        check_function(operator_v, enc_env), enc_env.codebook["#t"], enc_env
     ):
         print("is a function!")
     else:
@@ -358,9 +347,7 @@ def evaluate[T: (
         `InterpreterError`.
     """
     print("evaluate call", file=sys.stderr)
-    if is_approx_eq(
-        check_atomic(expr, enc_env, eval_env), enc_env.codebook["#t"], enc_env
-    ):
+    if is_approx_eq(check_atomic(expr, enc_env), enc_env.codebook["#t"], enc_env):
         print("expression is an atom", file=sys.stderr)
 
         if eval_env.locals_ is None:
@@ -432,9 +419,7 @@ def decode[T: (
     Raises:
         `InterpreterError`.
     """
-    if is_approx_eq(
-        check_atomic(expr, enc_env, eval_env), enc_env.codebook["#t"], enc_env
-    ):
+    if is_approx_eq(check_atomic(expr, enc_env), enc_env.codebook["#t"], enc_env):
         return closest(expr, enc_env)
     else:
         return ""
