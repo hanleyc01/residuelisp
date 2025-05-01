@@ -23,3 +23,16 @@ def test_hrr_bundle() -> None:
 
     assert left_bundle_right.sim(left) > threshold
     assert left_bundle_right.sim(right) > threshold
+
+
+def test_hrr_hash() -> None:
+    dim = 100
+    hrr_value = HRR.normal(dim)
+
+    d = {hrr_value: "test"}
+
+    assert d[hrr_value] == "test"
+
+    reverse = {v: k for (k, v) in d.items()}
+
+    assert reverse["test"] == hrr_value

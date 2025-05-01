@@ -23,3 +23,16 @@ def test_fhrr_bundle() -> None:
 
     assert left_bundle_right.sim(left) > threshold
     assert left_bundle_right.sim(right) > threshold
+
+
+def test_fhrr_hash() -> None:
+    dim = 100
+    fhrr_value = FHRR.uniform(dim)
+
+    d = {fhrr_value: "test"}
+
+    assert d[fhrr_value] == "test"
+
+    reverse = {v: k for (k, v) in d.items()}
+
+    assert reverse["test"] == fhrr_value

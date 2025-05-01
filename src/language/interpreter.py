@@ -254,7 +254,8 @@ def evaluate_application[T: (
     elif (mayb_define_val := eval_env.define_mem.deref(rator)) is not None:
         operator_v = mayb_define_val
     else:
-        operator_v = enc_env.cleanup_memory.recall(rator)
+        operator_v = rator
+    operator_v = enc_env.cleanup_memory.recall(operator_v)
 
     basic_fn = enc_env.codebook.reverse().get(operator_v)
     if basic_fn is not None and basic_fn in BASIC_FUNCTIONS:

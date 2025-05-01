@@ -5,7 +5,7 @@ from vsa import FHRR
 
 
 def main() -> None:
-    src = "bar bazz"
+    src = "(car nil)"
     dim = 100
     vsa = FHRR
     interpret(src, vsa, dim, IntegerEncodingScheme.ListIntegers)
