@@ -209,7 +209,10 @@ def evaluate_define[T: (
     Raises:
         `InterpreterError`.
     """
-    raise Exception("TODO")
+    name = car(define_body, enc_env, eval_env)
+    body = car(cdr(define_body, enc_env, eval_env), enc_env, eval_env)
+    eval_env.define_mem.associate(name, body)
+    return enc_env.codebook["nil"]
 
 
 def evaluate_application[T: (

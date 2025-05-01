@@ -108,6 +108,10 @@ class AssociativeMemory[T: (VSA[np.complex128], VSA[np.float64])]:
         self.assoc[ptr] = trace
         return ptr
 
+    def associate(self, key: T, trace: T) -> None:
+        """Directly associate a key with a trace."""
+        self.assoc[key] = trace
+
     def deref(self, ptr: T) -> T | None:
         """Dereference a semantic pointer, returning none if the dictionary
         is empty.
