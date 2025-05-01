@@ -45,6 +45,7 @@ def is_approx_eq[T: (
     VSA[np.float64],
 )](x: T, y: T, env: EncodingEnvironment[T], floor: float = 0.2) -> bool:
     """Approximate equality between two vector symbols."""
+    print("is_approx_eq call", file=sys.stderr)
     similarity = env.vsa.similarity(x.data, y.data)
     return similarity > floor
 
@@ -59,6 +60,7 @@ def check_atomic[T: (
     floor: float = 0.2,
 ) -> T:
     """Determine whether or not a value is an atomic value or a list."""
+    print("check_atomic_call", file=sys.stderr)
     value = enc_env.associative_memory.deref(expr)
     if value is None:
         return enc_env.codebook["#t"]
@@ -81,6 +83,51 @@ def check_atomic[T: (
     )
 
 
+def check_function[T: (
+    VSA[np.complex128],
+    VSA[np.float64],
+)](
+    expr: T,
+    enc_env: EncodingEnvironment[T],
+    eval_env: EvalEnvironment[T],
+    floor: float = 0.2,
+) -> T:
+    """Determine whether or not a value is a function by checking for the
+    special function symbol. This involves dereferencing the function as a
+    semantic function pointer, and inspecting the contents at the memory slot.
+
+    Args:
+    -   expr (VSA): An expression that is treated as a semantic pointer.
+    -   enc_env (EncodingEnvironment): The encoding environment.
+    -   eval_env (EvalEnvironment): The evaluation environment.
+    -   floor (float): Comparison floor, defaults to `0.2`.
+
+    Returns:
+        The vector-symbol for `#t` if the value contains the special function
+        vector-symbol.
+    """
+    value = enc_env.associative_memory.deref(expr)
+    if value is None:
+        return enc_env.codebook["#f"]
+
+    close_to___func = (
+        enc_env.vsa.similarity(value.data, enc_env.codebook["__func"].data)
+        * enc_env.codebook["#t"].data
+    )
+    far_from___func = (
+        max(
+            (2 * floor)
+            - enc_env.vsa.similarity(value.data, enc_env.codebook["__func"].data),
+            0.0,
+        )
+        * enc_env.codebook["#f"].data
+    )
+
+    return enc_env.cleanup_memory.recall(
+        enc_env.vsa.from_array(enc_env.vsa.bundle(close_to___func, far_from___func))
+    )
+
+
 def car[T: (
     VSA[np.complex128],
     VSA[np.float64],
@@ -99,6 +146,7 @@ def car[T: (
     Raises:
         `InterpreterError`.
     """
+    print("car call", file=sys.stderr)
     value = enc_env.associative_memory.deref(expr)
     if value is None:
         raise InterpreterError("Segmentation fault in car hehe")
@@ -128,6 +176,7 @@ def cdr[T: (
     Raises:
         `InterpreterError`.
     """
+    print("cdr call", file=sys.stderr)
     value = enc_env.associative_memory.deref(expr)
     if value is None:
         raise InterpreterError("Segmentation fault in cdr hehe")
@@ -165,6 +214,7 @@ def make_function_pointer[T: (
         A semantic pointer in the encoding environment that points to a
         function body chunk.
     """
+    print("make_function_pointer call", file=sys.stderr)
     tagged_args = enc_env.vsa.bind(args.data, enc_env.codebook["__args"].data)
     tagged_body = enc_env.vsa.bind(body.data, enc_env.codebook["__body"].data)
     function_tag = enc_env.codebook["__func"].data
@@ -194,6 +244,7 @@ def evaluate_lambda[T: (
         A semantic function pointer in `enc_env.associative_memory` which
         points to a function chunk.
     """
+    print("evaluate_lambda call", file=sys.stderr)
     args = car(function_body, enc_env, eval_env)
     body = cdr(function_body, enc_env, eval_env)
     return make_function_pointer(args, body, enc_env, eval_env)
@@ -216,6 +267,7 @@ def evaluate_define[T: (
     Raises:
         `InterpreterError`.
     """
+    print("evaluate_define call", file=sys.stderr)
     name = car(define_body, enc_env, eval_env)
     body = car(cdr(define_body, enc_env, eval_env), enc_env, eval_env)
     eval_env.define_mem.associate(name, body)
@@ -245,7 +297,7 @@ def evaluate_application[T: (
     Raises:
         `InterpreterError`.
     """
-
+    print("evaluate_application call", file=sys.stderr)
     operator_v: T
     if (eval_env.locals_ is not None) and (
         mayb_local_val := eval_env.locals_.deref(rator)
@@ -257,12 +309,34 @@ def evaluate_application[T: (
         operator_v = rator
     operator_v = enc_env.cleanup_memory.recall(operator_v)
 
-    basic_fn = enc_env.codebook.reverse().get(operator_v)
-    if basic_fn is not None and basic_fn in BASIC_FUNCTIONS:
-        if basic_fn == "car":
-            return car(rand, enc_env, eval_env)
-        if basic_fn == "cdr":
-            return cdr(rand, enc_env, eval_env)
+    if is_approx_eq(operator_v, enc_env.codebook["car"], enc_env):
+        print("closest to `car`", file=sys.stderr)
+    elif is_approx_eq(operator_v, enc_env.codebook["cdr"], enc_env):
+        print("closest to `cdr`", file=sys.stderr)
+    elif is_approx_eq(operator_v, enc_env.codebook["cons"], enc_env):
+        print("closest to `cons`", file=sys.stderr)
+    elif is_approx_eq(operator_v, enc_env.codebook["eq?"], enc_env):
+        print("closest to `eq?`", file=sys.stderr)
+    elif is_approx_eq(operator_v, enc_env.codebook["atom?"], enc_env):
+        print("closest to `atom?`", file=sys.stderr)
+    elif is_approx_eq(operator_v, enc_env.codebook["if"], enc_env):
+        print("closest to `if`", file=sys.stderr)
+    elif is_approx_eq(operator_v, enc_env.codebook["+"], enc_env):
+        print("closest to `+`", file=sys.stderr)
+    elif is_approx_eq(operator_v, enc_env.codebook["-"], enc_env):
+        print("closest to `-`", file=sys.stderr)
+    elif is_approx_eq(operator_v, enc_env.codebook["*"], enc_env):
+        print("closest to `*`", file=sys.stderr)
+    elif is_approx_eq(operator_v, enc_env.codebook["/"], enc_env):
+        print("closest to `/`", file=sys.stderr)
+    elif is_approx_eq(
+        check_function(operator_v, enc_env, eval_env), enc_env.codebook["#t"], enc_env
+    ):
+        print("is a function!")
+    else:
+        eval_rand = evaluate(rand, enc_env, eval_env)
+        return make_cons(operator_v, eval_rand, enc_env)
+
     raise Exception("TODO")
 
 
@@ -283,6 +357,7 @@ def evaluate[T: (
     Raises:
         `InterpreterError`.
     """
+    print("evaluate call", file=sys.stderr)
     if is_approx_eq(
         check_atomic(expr, enc_env, eval_env), enc_env.codebook["#t"], enc_env
     ):
