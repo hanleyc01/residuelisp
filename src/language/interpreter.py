@@ -157,7 +157,7 @@ def cdr[T: (
     Args:
     -   expr (VSA): A vector-symbol semantic pointer.
     -   enc_env (EncodingEnvironment): The encoding environment.
-    -   eval_env (EvalEnv): The encoding environment.
+    -   eval_env (EvalEnvironment): The encoding environment.
 
     Returns:
         A vector-symbol corresponding to the first element.
@@ -175,6 +175,54 @@ def cdr[T: (
             enc_env.vsa.unbind(value.data, enc_env.codebook["__rhs"].data)
         )
     )
+
+
+def cons[T: (
+    VSA[np.complex128],
+    VSA[np.float64],
+)](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+    """Create a new tuple out of the operands. For more information about how
+    this works, see `.language.interpreter.make_cons`.
+
+    Args:
+    -   rand (VSA): A vector-symbol list representing the arguments.
+    -   enc_env (EncodingEnvironment): The encoding environment.
+    -   eval_env (EvalEnvironment): The evaluation environment.
+
+    Returns:
+        A pointer to the tuple of the operand lists.
+
+    Raises:
+        `InterpreterError`.
+    """
+    car_ = car(rand, enc_env, eval_env)
+    ecar = evaluate(car_, enc_env, eval_env)
+
+    cdr_ = cdr(rand, enc_env, eval_env)
+    cadr = car(cdr_, enc_env, eval_env)
+    ecadr = evaluate(cadr, enc_env, eval_env)
+
+    return make_cons(ecar, ecadr, enc_env)
+
+
+def eq[T: (
+    VSA[np.complex128],
+    VSA[np.float64],
+)](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+    """Compare two values to see if they are the same.
+
+    Args:
+    -   rand (VSA): A vector-symbol list representing the arguments.
+    -   enc_env (EncodingEnvironment): The encoding environment.
+    -   eval_env (EvalEnvironment): The evaluation environment.
+
+    Returns:
+        A pointer to the tuple of the operand lists.
+
+    Raises:
+        `InterpreterError`.
+    """
+    raise Exception("TODO")
 
 
 def make_function_pointer[T: (
@@ -300,10 +348,18 @@ def evaluate_application[T: (
 
     if is_approx_eq(operator_v, enc_env.codebook["car"], enc_env):
         print("closest to `car`", file=sys.stderr)
+        # we evaluate the result of the operation, as we are not doing
+        # syntactic manipulation.
+        car_ = car(rand, enc_env, eval_env)
+        return evaluate(car_, enc_env, eval_env)
     elif is_approx_eq(operator_v, enc_env.codebook["cdr"], enc_env):
         print("closest to `cdr`", file=sys.stderr)
+        # ditto here
+        cdr_ = cdr(rand, enc_env, eval_env)
+        return evaluate(cdr_, enc_env, eval_env)
     elif is_approx_eq(operator_v, enc_env.codebook["cons"], enc_env):
         print("closest to `cons`", file=sys.stderr)
+        return cons(rand, enc_env, eval_env)
     elif is_approx_eq(operator_v, enc_env.codebook["eq?"], enc_env):
         print("closest to `eq?`", file=sys.stderr)
     elif is_approx_eq(operator_v, enc_env.codebook["atom?"], enc_env):

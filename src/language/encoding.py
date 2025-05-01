@@ -109,7 +109,29 @@ class CleanupMemory[T: (VSA[np.complex128], VSA[np.float64])]:
 
 
 class AssociativeMemory[T: (VSA[np.complex128], VSA[np.float64])]:
-    """Associative memory used for semantic pointers."""
+    """Associative memory used for semantic pointers.
+
+    The associative memmory pulls double duty, both as a store for semantic
+    pointers to tuple chunks as well as function chunks. For more information
+    about both of these values, see `.encoding.EncodingEnvironment`,
+    `.encoding.make_cons`, and `.interpreter.make_function_pointer`.
+
+    Interaction with the associative memory comes in two forms: the first is
+    through *allocation*. This creates a fresh vector-symbol from the
+    provided VSA and associates it with the value provided, using
+    `AssociativeMemory.alloc`.
+
+    The other way of interacting with the memory is by using `AssociativeMemory.associate`,
+    which takes a key and value and directly maps them in memory.
+
+    Retrieval is done through a single method `AssociativeMemory.deref`. It is
+    named as such in order to hammer home the semantic pointer analogy, but
+    it can be used in cases where directly associate two values in memory.
+
+    Args:
+    -   vsa (type[VSA]): A VSA class which has methods to be used in comparison.
+    -   dim (int): The dimensionality of the vectors used.
+    """
 
     vsa: type[T]
     dim: int
@@ -170,11 +192,28 @@ class Codebook[T: (VSA[np.complex128], VSA[np.float64])](UserDict[str, T]):
 class EncodingEnvironment[T: (VSA[np.complex128], VSA[np.float64])]:
     """Class for representing the encoding environment.
 
+    The encoding environment contains all of the things necessary for
+    encoding as well as important elements for interpretation. In particular,
+    we pass to the environment a class that implements VSA (over an
+    acceptable dtype), and these operations will be used in composing together
+    the language.
+
+    As slots of the class are a clean-up memory, associative memory, and
+    integer encoding scheme used in encoding and interpretation. The
+    clean-up memory's use is self-explanatory. However, associative memory
+    pulls double duty in encoding and interpretation. It is where we 'allocate'
+    and create semantic pointers to (1) tuple chunks (see `.encoding.make_cons`)
+    and (2) function chunks (see `.interpreter.make_function_pointer`).
+
+    Semantic pointers are just fresh vector-symbols, and they can be used
+    in interpretation as such.
+
     Args:
     -   vsa (type[VSA]): The type of the encoding environment, which
             will determine what kind of vector-symbols are returned from the
             encoding function.
     -   dim (int): The dimensionality of the vector-symbols.
+    -   integer_encoding_scheme (IntegerEncodingScheme)
     """
 
     vsa: type[T]
@@ -307,6 +346,23 @@ def make_cons[T: (
     VSA[np.float64],
 )](head: T, tail: T, env: EncodingEnvironment[T]) -> T:
     """Make a semantic pointer to a tuple chunk.
+
+    The format of the tuple chunk is similar to that of the function
+    pointer chunk (see `.interpreter.make_function_pointer`). Given
+    our VSA, it is formed by bundling together role-filler pairs of the values
+    with `__lhs` (for the first element) and `__rhs` (for the second element)
+    with a tag that denotes this as a tuple `__phi`.
+    ```
+    (x * __lhs) + (y * __rhs) + __phi
+    ```
+    We 'allocate' a pointer in our associative memory, which just means
+    we create a new vector-symbol that is associated with this value,
+    and return that.
+
+    Operating over this chunk requires that we *dereference* the value. This
+    functionality is given by `.encoding.AssociativeMemory.deref`, which
+    merely searches through the associative memory to find the closest value
+    to the semantic pointer.
 
     Args:
     -   head (VSA): The first element of the tuple.
