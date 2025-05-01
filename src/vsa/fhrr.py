@@ -60,7 +60,7 @@ class FHRR(VSA[np.complex128]):
     @staticmethod
     def new(dim: int) -> FHRR:
         """Static method creating a new FHRR using `FHRR.uniform`.
-        
+
         Args:
         -   dim (int): The dimensionality of the new vector symbol.
 
@@ -106,7 +106,7 @@ class FHRR(VSA[np.complex128]):
         Returns:
             The element-wise product of both `x` and the inverse of `y`.
         """
-        
+
         return FHRR.bind(x, FHRR.inv(y))
 
     @staticmethod

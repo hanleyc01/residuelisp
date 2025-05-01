@@ -41,6 +41,9 @@ class TokenKind(Enum):
     Cons = auto()
     Nil = auto()
     Not = auto()
+    Eq = auto()
+    Atom = auto()
+    Quote = auto()
 
     def __str__(self) -> str:
         return self.name
@@ -56,6 +59,9 @@ KEYWORDS = {
     "not": TokenKind.Not,
     "if": TokenKind.If,
     "let": TokenKind.Let,
+    "eq?": TokenKind.Eq,
+    "atom?": TokenKind.Atom,
+    "quote": TokenKind.Quote,
 }
 """Reserved keywords."""
 
@@ -118,7 +124,7 @@ def _digit(d: str, conts: "more_itertools.peekable[str]") -> Token | None:
 def _key_or_ident(c: str, conts: "more_itertools.peekable[str]") -> Token | None:
     word = [c]
     curr = _next(conts)
-    while curr is not None and curr.isalpha():
+    while curr is not None and (curr.isalpha() or curr == "?"):
         word.append(curr)
         curr = _next(conts)
     symbol = "".join(word)

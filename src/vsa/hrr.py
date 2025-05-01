@@ -37,7 +37,7 @@ class HRR(vsa.VSA[np.float64]):
         -   size (int): The dimensionality of the new HRR vector-symbol.
         -   sd (float | None): Defaults to `None`, the standard deviation
             of the normal distribution.
-        
+
         Returns:
             A new HRR vector-symbol.
         """
@@ -108,7 +108,7 @@ class HRR(vsa.VSA[np.float64]):
         Returns:
             The approximate inverse of `x`.
         """
-        
+
         return x[np.r_[0, x.size - 1 : 0 : -1]]
 
     @staticmethod

@@ -8,11 +8,18 @@ from typing import Any
 
 import numpy as np
 
-from syntax import lex, parse
+from syntax import KEYWORDS, OPERATORS, lex, parse
 from vsa import VSA
 
 from .encoding import (AssociativeMemory, EncodingEnvironment,
                        IntegerEncodingScheme, encode, make_cons)
+
+BASIC_FUNCTIONS = [
+    word
+    for word in list(KEYWORDS.keys()) + list(OPERATORS.keys())
+    if word not in ["define", "lambda"]
+]
+"""List of reserved, basic function symbols."""
 
 
 @dataclass
@@ -249,8 +256,12 @@ def evaluate_application[T: (
     else:
         operator_v = enc_env.cleanup_memory.recall(rator)
 
-    
-
+    basic_fn = enc_env.codebook.reverse().get(operator_v)
+    if basic_fn is not None and basic_fn in BASIC_FUNCTIONS:
+        if basic_fn == "car":
+            return car(rand, enc_env, eval_env)
+        if basic_fn == "cdr":
+            return cdr(rand, enc_env, eval_env)
     raise Exception("TODO")
 
 

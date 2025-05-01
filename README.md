@@ -14,9 +14,9 @@ $ uv run ./src/main.py
 ```
 
 In order to hack on this or contribute, make sure that you format the code
-using `black` with the command `black -l79`. Similarly, make sure it passes
+using `black` with the command `./.venv/bin/black ./src/*`. Similarly, make sure it passes
 `mypy --strict`. To help with this, before submitting any changes,
-run `./build.sh` which should format and type check the code.
+run `./pre_commit.sh` which should format and type check the code.
 
 # Documentation
 

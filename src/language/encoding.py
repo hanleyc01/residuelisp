@@ -3,6 +3,7 @@ representaitons into vector-symbolic representations.
 """
 
 import sys
+from collections import UserDict
 from dataclasses import dataclass
 from enum import Enum, auto
 from typing import cast
@@ -154,6 +155,18 @@ class AssociativeMemory[T: (VSA[np.complex128], VSA[np.float64])]:
         return None
 
 
+class Codebook[T: (VSA[np.complex128], VSA[np.float64])](UserDict[str, T]):
+    """A Codebook is just a built-in dictionary, which has the additional
+    `reverse` method.
+
+    Args:
+    -   data (dict[str, VSA]): A dictionary mapping strings to vector-symbols.
+    """
+
+    def reverse(self) -> dict[T, str]:
+        return {v: k for (k, v) in self.data.items()}
+
+
 class EncodingEnvironment[T: (VSA[np.complex128], VSA[np.float64])]:
     """Class for representing the encoding environment.
 
@@ -166,7 +179,7 @@ class EncodingEnvironment[T: (VSA[np.complex128], VSA[np.float64])]:
 
     vsa: type[T]
     dim: int
-    codebook: dict[str, T]
+    codebook: Codebook[T]
     cleanup_memory: CleanupMemory[T]
     associative_memory: AssociativeMemory[T]
     integer_encoding_scheme: IntegerEncodingScheme
@@ -179,7 +192,9 @@ class EncodingEnvironment[T: (VSA[np.complex128], VSA[np.float64])]:
     ) -> None:
         self.vsa = vsa
         self.dim = dim
-        self.codebook = EncodingEnvironment.initial_codebook(self.vsa, self.dim)
+        self.codebook = Codebook(
+            EncodingEnvironment.initial_codebook(self.vsa, self.dim)
+        )
         self.cleanup_memory = CleanupMemory(self.vsa, self.dim)
         self.associative_memory = AssociativeMemory(self.vsa, self.dim)
         self.integer_encoding_scheme = integer_encoding_scheme
