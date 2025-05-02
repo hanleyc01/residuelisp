@@ -343,12 +343,54 @@ def if_[T: (
     else:
         return evaluate(consequent, enc_env, eval_env)
 
+    
+# TODO: add support for quoting
+def quote[T: (
+    VSA[np.complex128],
+    VSA[np.float64],
+)](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+    """Capture the following code as raw syntax which can be later evaluated.
+    Syntax which is quoted can be later interpreted using the function 
+    `unquote`.
+
+    The format of a quote chunk is a pointer to some raw syntax which is
+    annotated as being quoted.
+
+    Args:
+    -   rand (VSA): A vector-symbol representing some syntax.
+    -   enc_env (EncodingEnvironment): The encoding environment.
+    -   eval_env (EvalEnvironment): The evaluation environment.
+
+    Returns:
+        A quote chunk.
+    """
+    raise Exception("TODO")
+
 
 def add[T: (
     VSA[np.complex128],
     VSA[np.float64],
 )](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
-    """ """
+    """Addition of operands. 
+    
+    The form of the function depends on `.encoding.IntegerEncodingScheme`. If
+    it is `.encoding.IntegerEncodingScheme.ListIntegers`, then we will use an
+    encoding scheme reminiscent of the [Peano definition](https://en.wikipedia.org/wiki/Peano_axioms),
+    or, the [Church encoding](https://en.wikipedia.org/wiki/Church_encoding) of
+    the natural numbers.
+    
+    If the the encoding scheme is `.encoding.IntegerEncodingScheme.RHCIntegers`,
+    then we will use [Residue Hyperdimensional Computing](https://direct.mit.edu/neco/article/37/1/1/125267/Computing-With-Residue-Numbers-in-High-Dimensional),
+    or RHC.
+
+    Args:
+    -   rand (VSA): A vector-symbol of arguments.
+    -   enc_env (EncodingEnvironment): The encoding environment.
+    -   eval_env (EvalEnvironment): The evaluation environment.
+
+    Returns:
+        The sum of the two numbers, using the encoding scheme provided.
+    """
     raise Exception("TODO")
 
 
@@ -356,7 +398,26 @@ def sub[T: (
     VSA[np.complex128],
     VSA[np.float64],
 )](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
-    """ """
+    """Subtraction of operands. 
+    
+    The form of the function depends on `.encoding.IntegerEncodingScheme`. If
+    it is `.encoding.IntegerEncodingScheme.ListIntegers`, then we will use an
+    encoding scheme reminiscent of the [Peano definition](https://en.wikipedia.org/wiki/Peano_axioms),
+    or, the [Church encoding](https://en.wikipedia.org/wiki/Church_encoding) of
+    the natural numbers.
+    
+    If the the encoding scheme is `.encoding.IntegerEncodingScheme.RHCIntegers`,
+    then we will use [Residue Hyperdimensional Computing](https://direct.mit.edu/neco/article/37/1/1/125267/Computing-With-Residue-Numbers-in-High-Dimensional),
+    or RHC.
+
+    Args:
+    -   rand (VSA): A vector-symbol of arguments.
+    -   enc_env (EncodingEnvironment): The encoding environment.
+    -   eval_env (EvalEnvironment): The evaluation environment.
+
+    Returns:
+        The difference of the two numbers, using the encoding scheme provided.
+    """
     raise Exception("TODO")
 
 
@@ -364,7 +425,26 @@ def mul[T: (
     VSA[np.complex128],
     VSA[np.float64],
 )](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
-    """ """
+    """Product of operands. 
+    
+    The form of the function depends on `.encoding.IntegerEncodingScheme`. If
+    it is `.encoding.IntegerEncodingScheme.ListIntegers`, then we will use an
+    encoding scheme reminiscent of the [Peano definition](https://en.wikipedia.org/wiki/Peano_axioms),
+    or, the [Church encoding](https://en.wikipedia.org/wiki/Church_encoding) of
+    the natural numbers.
+    
+    If the the encoding scheme is `.encoding.IntegerEncodingScheme.RHCIntegers`,
+    then we will use [Residue Hyperdimensional Computing](https://direct.mit.edu/neco/article/37/1/1/125267/Computing-With-Residue-Numbers-in-High-Dimensional),
+    or RHC.
+
+    Args:
+    -   rand (VSA): A vector-symbol of arguments.
+    -   enc_env (EncodingEnvironment): The encoding environment.
+    -   eval_env (EvalEnvironment): The evaluation environment.
+
+    Returns:
+        The product of the two numbers, using the encoding scheme provided.
+    """
     raise Exception("TODO")
 
 
@@ -372,7 +452,26 @@ def div[T: (
     VSA[np.complex128],
     VSA[np.float64],
 )](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
-    """ """
+    """Division of operands. 
+    
+    The form of the function depends on `.encoding.IntegerEncodingScheme`. If
+    it is `.encoding.IntegerEncodingScheme.ListIntegers`, then we will use an
+    encoding scheme reminiscent of the [Peano definition](https://en.wikipedia.org/wiki/Peano_axioms),
+    or, the [Church encoding](https://en.wikipedia.org/wiki/Church_encoding) of
+    the natural numbers.
+    
+    If the the encoding scheme is `.encoding.IntegerEncodingScheme.RHCIntegers`,
+    then we will use [Residue Hyperdimensional Computing](https://direct.mit.edu/neco/article/37/1/1/125267/Computing-With-Residue-Numbers-in-High-Dimensional),
+    or RHC.
+
+    Args:
+    -   rand (VSA): A vector-symbol of arguments.
+    -   enc_env (EncodingEnvironment): The encoding environment.
+    -   eval_env (EvalEnvironment): The evaluation environment.
+
+    Returns:
+        The fraction of the two numbers, using the encoding scheme provided.
+    """
     raise Exception("TODO")
 
 
@@ -536,6 +635,9 @@ def evaluate_application[T: (
     elif is_approx_eq(operator_v, enc_env.codebook["if"], enc_env):
         print("closest to `if`", file=sys.stderr)
         return if_(rand, enc_env, eval_env)
+    elif is_approx_eq(operator_v, enc_env.codebook["quote"], enc_env):
+        print("closest to `quote`", file=sys.stderr)
+        return quote(rand, enc_env, eval_env)
     elif is_approx_eq(operator_v, enc_env.codebook["+"], enc_env):
         print("closest to `+`", file=sys.stderr)
         return add(rand, enc_env, eval_env)

@@ -256,9 +256,12 @@ class EncodingEnvironment[T: (VSA[np.complex128], VSA[np.float64])]:
         for value in VALUES.keys():
             codebook[value] = vsa.new(dim)
 
+        # tuple chunks
         codebook["__phi"] = vsa.new(dim)
         codebook["__lhs"] = vsa.new(dim)
         codebook["__rhs"] = vsa.new(dim)
+
+        # function chunks
         codebook["__args"] = vsa.new(dim)
         codebook["__body"] = vsa.new(dim)
         codebook["__func"] = vsa.new(dim)
