@@ -176,3 +176,27 @@ def test_if_alternate(dim: int) -> None:
     value = evaluate(encoded_value, enc_env, eval_env)
 
     assert is_true(value, enc_env)
+
+
+def test_atom(dim: int) -> None:
+    srcs = [
+        "(atom? #f)",
+        "(atom? #t)",
+        "(atom? nil)",
+        "(atom? cons)",
+    ]
+    vsa = FHRR
+
+    enc_env = EncodingEnvironment(vsa=vsa, dim=dim)
+    eval_env = EvalEnvironment(AssociativeMemory(vsa=vsa, dim=dim), None)
+
+    for src in srcs:
+        encoded_value = encode(parse(lex(src)), enc_env)
+        value = evaluate(encoded_value, enc_env, eval_env)
+
+        assert is_true(value, enc_env)
+
+    src = "(atom? (cons nil nil))"
+    encoded_value = encode(parse(lex(src)), enc_env)
+    value = evaluate(encoded_value, enc_env, eval_env)
+    assert is_false(value, enc_env)

@@ -300,7 +300,8 @@ def atom[T: (
     Raises:
         `InterpreterError`.
     """
-    raise Exception("TODO")
+    arg = car(rand, enc_env, eval_env)
+    return check_atomic(arg, enc_env)
 
 
 def if_[T: (
