@@ -44,7 +44,18 @@ def is_approx_eq[T: (
     VSA[np.complex128],
     VSA[np.float64],
 )](x: T, y: T, env: EncodingEnvironment[T], floor: float = 0.2) -> bool:
-    """Approximate equality between two vector symbols."""
+    """Approximate equality between two vector symbols.
+
+    Args:
+    -   x (VSA): The left-hand side of the comparison.
+    -   y (VSA): The right-hand side of the comparison.
+    -   env (EncodingEnv): The encoding environment.
+    -   floor (float): Defaults to `0.2`, the comparison floor.
+
+    Returns:
+        `True` iff the similarity between the `x` and `y` is greater than
+        `floor`, `False` otherwise.
+    """
     print("is_approx_eq call", file=sys.stderr)
     similarity = abs(env.vsa.similarity(x.data, y.data))
     print(f"\tsimilarity = {similarity}", file=sys.stderr)
@@ -142,7 +153,9 @@ def car[T: (
         raise InterpreterError("Segmentation fault in car hehe")
 
     slot = enc_env.vsa.unbind(value.data, enc_env.codebook["__lhs"].data)
-    return enc_env.cleanup_memory.recall(enc_env.vsa.from_array(slot))
+    # return enc_env.cleanup_memory.recall(enc_env.vsa.from_array(slot))
+    recalled_value = enc_env.cleanup_memory.recall(enc_env.vsa.from_array(slot))
+    return recalled_value
 
 
 def cdr[T: (
@@ -169,7 +182,8 @@ def cdr[T: (
         raise InterpreterError("Segmentation fault in cdr hehe")
 
     slot = enc_env.vsa.unbind(value.data, enc_env.codebook["__rhs"].data)
-    return enc_env.cleanup_memory.recall(enc_env.vsa.from_array(slot))
+    recalled_value = enc_env.cleanup_memory.recall(enc_env.vsa.from_array(slot))
+    return recalled_value
 
 
 def cons[T: (
@@ -197,7 +211,8 @@ def cons[T: (
     cadr = car(cdr_, enc_env, eval_env)
     ecadr = evaluate(cadr, enc_env, eval_env)
 
-    return make_cons(ecar, ecadr, enc_env)
+    ptr = make_cons(ecar, ecadr, enc_env)
+    return ptr
 
 
 def eq[T: (
@@ -420,12 +435,32 @@ def evaluate_application[T: (
         # we evaluate the result of the operation, as we are not doing
         # syntactic manipulation.
         car_ = car(rand, enc_env, eval_env)
-        return evaluate(car_, enc_env, eval_env)
+
+        if not is_approx_eq(
+            cdr(rand, enc_env, eval_env), enc_env.codebook["nil"], enc_env
+        ):
+            print(
+                "WARNING: car takes only one argument, ignoring the rest!",
+                file=sys.stderr,
+            )
+
+        value = evaluate(car_, enc_env, eval_env)
+        return car(value, enc_env, eval_env)
     elif is_approx_eq(operator_v, enc_env.codebook["cdr"], enc_env):
         print("closest to `cdr`", file=sys.stderr)
         # ditto here
-        cdr_ = cdr(rand, enc_env, eval_env)
-        return evaluate(cdr_, enc_env, eval_env)
+        car_ = car(rand, enc_env, eval_env)
+
+        if not is_approx_eq(
+            cdr(rand, enc_env, eval_env), enc_env.codebook["nil"], enc_env
+        ):
+            print(
+                "WARNING: cdr takes only one argument, ignoring the rest!",
+                file=sys.stderr,
+            )
+
+        value = evaluate(car_, enc_env, eval_env)
+        return cdr(value, enc_env, eval_env)
     elif is_approx_eq(operator_v, enc_env.codebook["cons"], enc_env):
         print("closest to `cons`", file=sys.stderr)
         return cons(rand, enc_env, eval_env)
@@ -453,7 +488,7 @@ def evaluate_application[T: (
     elif is_approx_eq(
         check_function(operator_v, enc_env), enc_env.codebook["#t"], enc_env
     ):
-        print("is a function!")
+        print("is a function!", file=sys.stderr)
     else:
         eval_rand = evaluate(rand, enc_env, eval_env)
         return make_cons(operator_v, eval_rand, enc_env)
@@ -498,7 +533,8 @@ def evaluate[T: (
             return res
 
     print("\texpression is non-atomic", file=sys.stderr)
-    head, tail = car(expr, enc_env, eval_env), cdr(expr, enc_env, eval_env)
+    head = car(expr, enc_env, eval_env)
+    tail = cdr(expr, enc_env, eval_env)
 
     if is_approx_eq(head, enc_env.codebook["lambda"], enc_env):
         return evaluate_lambda(tail, enc_env, eval_env)
