@@ -124,3 +124,55 @@ def test_embedded_cons(dim: int) -> None:
 
     assert closest(value, enc_env) == "#t"
     # assert is_approx_eq(check_atomic(value, enc_env), enc_env.codebook["#t"], enc_env)
+
+
+def test_is_false(dim: int) -> None:
+    src = "#f"
+    vsa = FHRR
+
+    enc_env = EncodingEnvironment(vsa=vsa, dim=dim)
+    eval_env = EvalEnvironment(AssociativeMemory(vsa=vsa, dim=dim), None)
+
+    encoded_value = encode(parse(lex(src)), enc_env)
+    value = evaluate(encoded_value, enc_env, eval_env)
+
+    assert is_false(value, enc_env)
+
+
+def test_is_true(dim: int) -> None:
+    src = "#t"
+    vsa = FHRR
+
+    enc_env = EncodingEnvironment(vsa=vsa, dim=dim)
+    eval_env = EvalEnvironment(AssociativeMemory(vsa=vsa, dim=dim), None)
+
+    encoded_value = encode(parse(lex(src)), enc_env)
+    value = evaluate(encoded_value, enc_env, eval_env)
+
+    assert is_true(value, enc_env)
+
+
+def test_if_consequent(dim: int) -> None:
+    src = "(if #t #t #t)"
+    vsa = FHRR
+
+    enc_env = EncodingEnvironment(vsa=vsa, dim=dim)
+    eval_env = EvalEnvironment(AssociativeMemory(vsa=vsa, dim=dim), None)
+
+    encoded_value = encode(parse(lex(src)), enc_env)
+    value = evaluate(encoded_value, enc_env, eval_env)
+
+    assert is_true(value, enc_env)
+
+
+def test_if_alternate(dim: int) -> None:
+    src = "(if #f #f #t)"
+    vsa = FHRR
+
+    enc_env = EncodingEnvironment(vsa=vsa, dim=dim)
+    eval_env = EvalEnvironment(AssociativeMemory(vsa=vsa, dim=dim), None)
+
+    encoded_value = encode(parse(lex(src)), enc_env)
+    value = evaluate(encoded_value, enc_env, eval_env)
+
+    assert is_true(value, enc_env)

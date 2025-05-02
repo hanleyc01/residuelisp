@@ -62,6 +62,54 @@ def is_approx_eq[T: (
     return similarity > floor
 
 
+def is_nil[T: (
+    VSA[np.complex128],
+    VSA[np.float64],
+)](value: T, enc_env: EncodingEnvironment[T], floor: float = 0.2) -> bool:
+    """Test whether or not a value is `nil`.
+
+    Args
+    -   value (VSA): A vector-symbol, which will be tested.
+    -   enc_env (VSA): The encoding environment which contains the `nil` symbol.
+
+    Returns:
+        A boolean value about whether or not the value given is `nil`.
+    """
+    return is_approx_eq(value, enc_env.codebook["nil"], enc_env)
+
+
+def is_false[T: (
+    VSA[np.complex128],
+    VSA[np.float64],
+)](value: T, enc_env: EncodingEnvironment[T], floor: float = 0.2) -> bool:
+    """Test whether or not a value is `#f`.
+
+    Args
+    -   value (VSA): A vector-symbol, which will be tested.
+    -   enc_env (VSA): The encoding environment which contains the `#f` symbol.
+
+    Returns:
+        A boolean value about whether or not the value given is `#f`.
+    """
+    return is_approx_eq(value, enc_env.codebook["#f"], enc_env)
+
+
+def is_true[T: (
+    VSA[np.complex128],
+    VSA[np.float64],
+)](value: T, enc_env: EncodingEnvironment[T], floor: float = 0.2) -> bool:
+    """Test whether or not a value is `#t`.
+
+    Args
+    -   value (VSA): A vector-symbol, which will be tested.
+    -   enc_env (VSA): The encoding environment which contains the `#t` symbol.
+
+    Returns:
+        A boolean value about whether or not the value given is `#t`.
+    """
+    return is_approx_eq(value, enc_env.codebook["#t"], enc_env)
+
+
 def check_atomic[T: (
     VSA[np.complex128],
     VSA[np.float64],
@@ -274,7 +322,25 @@ def if_[T: (
     Raises:
         `InterpreterError`.
     """
-    raise Exception("TODO")
+
+    # expected syntax:
+    # (if (condition (consequent (alternate nil))))
+
+    condition = car(rand, enc_env, eval_env)
+    branches = cdr(rand, enc_env, eval_env)
+    if is_nil(branches, enc_env):
+        raise InterpreterError(
+            "ERROR: Conditional expression requires `CONSEQUENT` and `ALTERNATE`, see documentation: [https://conservatory.scheme.org/schemers/Documents/Standards/R5RS/HTML/]"
+        )
+
+    consequent = car(branches, enc_env, eval_env)
+    final_branch = cdr(branches, enc_env, eval_env)
+    alternate = car(final_branch, enc_env, eval_env)
+
+    if is_nil(condition, enc_env) or is_false(condition, enc_env):
+        return evaluate(alternate, enc_env, eval_env)
+    else:
+        return evaluate(consequent, enc_env, eval_env)
 
 
 def add[T: (
@@ -436,9 +502,7 @@ def evaluate_application[T: (
         # syntactic manipulation.
         car_ = car(rand, enc_env, eval_env)
 
-        if not is_approx_eq(
-            cdr(rand, enc_env, eval_env), enc_env.codebook["nil"], enc_env
-        ):
+        if not is_nil(cdr(rand, enc_env, eval_env), enc_env):
             print(
                 "WARNING: car takes only one argument, ignoring the rest!",
                 file=sys.stderr,
@@ -451,9 +515,7 @@ def evaluate_application[T: (
         # ditto here
         car_ = car(rand, enc_env, eval_env)
 
-        if not is_approx_eq(
-            cdr(rand, enc_env, eval_env), enc_env.codebook["nil"], enc_env
-        ):
+        if not is_nil(cdr(rand, enc_env, eval_env), enc_env):
             print(
                 "WARNING: cdr takes only one argument, ignoring the rest!",
                 file=sys.stderr,
