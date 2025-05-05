@@ -1,6 +1,16 @@
 from vsa import HRR
 
 
+def test_hrr_sim() -> None:
+    dim = 100
+    left = HRR.normal(dim)
+    right = HRR.normal(dim)
+
+    threshold = 0.2
+
+    assert left.sim(right) < threshold
+
+
 def test_hrr_bind() -> None:
     dim = 100
     left = HRR.normal(dim)

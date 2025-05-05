@@ -107,7 +107,8 @@ class RHC(VSA[np.complex128]):
 
     @staticmethod
     def similarity(x: ArrayC128, y: ArrayC128) -> float:
-        return float((np.dot(np.conjugate(x.T), y)) / x.size)
+        # return float((np.dot(np.conjugate(x.T), y)) / x.size)
+        return abs(FHRR.similarity(x, y))
 
     @staticmethod
     def from_array(x: ArrayC128) -> RHC:

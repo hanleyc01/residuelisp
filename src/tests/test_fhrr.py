@@ -1,6 +1,16 @@
 from vsa import FHRR
 
 
+def test_fhrr_sim() -> None:
+    dim = 100
+    left = FHRR.uniform(dim)
+    right = FHRR.uniform(dim)
+
+    threshold = 0.2
+
+    assert left.sim(right) < threshold
+
+
 def test_fhrr_bind() -> None:
     dim = 100
     left = FHRR.uniform(dim)
