@@ -343,14 +343,14 @@ def if_[T: (
     else:
         return evaluate(consequent, enc_env, eval_env)
 
-    
+
 # TODO: add support for quoting
 def quote[T: (
     VSA[np.complex128],
     VSA[np.float64],
 )](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
     """Capture the following code as raw syntax which can be later evaluated.
-    Syntax which is quoted can be later interpreted using the function 
+    Syntax which is quoted can be later interpreted using the function
     `unquote`.
 
     The format of a quote chunk is a pointer to some raw syntax which is
@@ -371,14 +371,14 @@ def add[T: (
     VSA[np.complex128],
     VSA[np.float64],
 )](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
-    """Addition of operands. 
-    
+    """Addition of operands.
+
     The form of the function depends on `.encoding.IntegerEncodingScheme`. If
     it is `.encoding.IntegerEncodingScheme.ListIntegers`, then we will use an
     encoding scheme reminiscent of the [Peano definition](https://en.wikipedia.org/wiki/Peano_axioms),
     or, the [Church encoding](https://en.wikipedia.org/wiki/Church_encoding) of
     the natural numbers.
-    
+
     If the the encoding scheme is `.encoding.IntegerEncodingScheme.RHCIntegers`,
     then we will use [Residue Hyperdimensional Computing](https://direct.mit.edu/neco/article/37/1/1/125267/Computing-With-Residue-Numbers-in-High-Dimensional),
     or RHC.
@@ -398,14 +398,14 @@ def sub[T: (
     VSA[np.complex128],
     VSA[np.float64],
 )](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
-    """Subtraction of operands. 
-    
+    """Subtraction of operands.
+
     The form of the function depends on `.encoding.IntegerEncodingScheme`. If
     it is `.encoding.IntegerEncodingScheme.ListIntegers`, then we will use an
     encoding scheme reminiscent of the [Peano definition](https://en.wikipedia.org/wiki/Peano_axioms),
     or, the [Church encoding](https://en.wikipedia.org/wiki/Church_encoding) of
     the natural numbers.
-    
+
     If the the encoding scheme is `.encoding.IntegerEncodingScheme.RHCIntegers`,
     then we will use [Residue Hyperdimensional Computing](https://direct.mit.edu/neco/article/37/1/1/125267/Computing-With-Residue-Numbers-in-High-Dimensional),
     or RHC.
@@ -425,14 +425,14 @@ def mul[T: (
     VSA[np.complex128],
     VSA[np.float64],
 )](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
-    """Product of operands. 
-    
+    """Product of operands.
+
     The form of the function depends on `.encoding.IntegerEncodingScheme`. If
     it is `.encoding.IntegerEncodingScheme.ListIntegers`, then we will use an
     encoding scheme reminiscent of the [Peano definition](https://en.wikipedia.org/wiki/Peano_axioms),
     or, the [Church encoding](https://en.wikipedia.org/wiki/Church_encoding) of
     the natural numbers.
-    
+
     If the the encoding scheme is `.encoding.IntegerEncodingScheme.RHCIntegers`,
     then we will use [Residue Hyperdimensional Computing](https://direct.mit.edu/neco/article/37/1/1/125267/Computing-With-Residue-Numbers-in-High-Dimensional),
     or RHC.
@@ -452,14 +452,14 @@ def div[T: (
     VSA[np.complex128],
     VSA[np.float64],
 )](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
-    """Division of operands. 
-    
+    """Division of operands.
+
     The form of the function depends on `.encoding.IntegerEncodingScheme`. If
     it is `.encoding.IntegerEncodingScheme.ListIntegers`, then we will use an
     encoding scheme reminiscent of the [Peano definition](https://en.wikipedia.org/wiki/Peano_axioms),
     or, the [Church encoding](https://en.wikipedia.org/wiki/Church_encoding) of
     the natural numbers.
-    
+
     If the the encoding scheme is `.encoding.IntegerEncodingScheme.RHCIntegers`,
     then we will use [Residue Hyperdimensional Computing](https://direct.mit.edu/neco/article/37/1/1/125267/Computing-With-Residue-Numbers-in-High-Dimensional),
     or RHC.
