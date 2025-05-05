@@ -367,6 +367,48 @@ def quote[T: (
     raise Exception("TODO")
 
 
+def list_add[T: (
+    VSA[np.complex128],
+    VSA[np.float64],
+)](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+    """List addition.
+
+    Recall that `.encoding.IntegerEncoding.ListIntegers` encodes integers via
+    iterated cons. Thus, `0` is `nil`, and `succ n = (cons nil (encode n - 1))`.
+    Thus, `1 = (cons nil nil)`, `2 = (cons nil (cons nil nil))`, and so on
+    and so forth.
+
+    But, this immediately fulfills the familiar Peano axioms regarding the
+    natural numbers. Our zero element is just `nil`, and our successor function
+    is just `cons`.
+
+    Recall Peano addition is defined as:
+    ```
+    add (x, nil)          = x
+    add (x, (cons nil y)) = (cons nil (add x y))
+    ```
+    """
+
+    lhs = car(rand, enc_env, eval_env)
+
+    cdr_ = cdr(rand, enc_env, eval_env)  # discard the final `nil` of the list
+    rhs = car(cdr_, enc_env, eval_env)
+
+    if is_nil(rhs, enc_env):
+        return lhs
+    else:
+        y = cdr(rhs, enc_env, eval_env)
+        rand_ = make_cons(lhs, y, enc_env)
+        return make_cons(enc_env.codebook["nil"], rand_, enc_env)
+
+
+def rhc_add[T: (
+    VSA[np.complex128],
+    VSA[np.float64],
+)](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+    raise Exception("TODO")
+
+
 def add[T: (
     VSA[np.complex128],
     VSA[np.float64],
@@ -391,7 +433,14 @@ def add[T: (
     Returns:
         The sum of the two numbers, using the encoding scheme provided.
     """
-    raise Exception("TODO")
+    if enc_env.integer_encoding_scheme == IntegerEncodingScheme.ListIntegers:
+        return list_add(rand, enc_env, eval_env)
+    elif enc_env.integer_encoding_scheme == IntegerEncodingScheme.RHCIntegers:
+        return rhc_add(rand, enc_env, eval_env)
+    else:
+        raise InterpreterError(
+            f"Unknown integer format: {enc_env.integer_encoding_scheme}"
+        )
 
 
 def sub[T: (

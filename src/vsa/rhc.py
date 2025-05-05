@@ -107,7 +107,7 @@ class RHC(VSA[np.complex128]):
 
     @staticmethod
     def similarity(x: ArrayC128, y: ArrayC128) -> float:
-        return np.dot(x, np.conjugate(y.T)).real / x.size
+        return float(np.dot(x, np.conjugate(y.T)).real / x.size)
 
     @staticmethod
     def from_array(x: ArrayC128) -> RHC:
@@ -118,7 +118,13 @@ class RHC(VSA[np.complex128]):
         raise NotImplementedError()
 
     @staticmethod
-    def encode(dim: int, num: int, moduli: list[int] = DEFAULT_MODULI) -> RHC:
+    def encode(
+        dim: int,
+        num: int,
+        moduli: list[int] = DEFAULT_MODULI,
+        roots: list[ArrayC128] | None = None,
+        phis: list[ArrayC128] | None = None,
+    ) -> RHC:
         """Encode a natural number into RHC.
 
         Args:
@@ -132,7 +138,7 @@ class RHC(VSA[np.complex128]):
         """
 
         data = np.ones(dim, dtype=complex)
-        prod = RHC(data, moduli=moduli)
+        prod = RHC(data, moduli=moduli, roots=roots, phis=phis)
 
         phis = prod.phis
         for phi in phis:

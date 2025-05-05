@@ -10,8 +10,15 @@ the instructions listed there for installation.
 
 In order to run the tests, enter into your command line:
 ```bash
-$ uv run ./src/main.py
+$ uv run ./src/main.py -p
 ```
+These should produce some performance graphs.
+
+If you want to interpret a file, run
+```bash
+$ uv run ./src/main.py -i <filename>
+```
+[WARNING: CURRENTLY NOT SUPPPORTED]
 
 In order to hack on this or contribute, make sure that you format the code
 using `black` with the command `./.venv/bin/black ./src/*`. Similarly, make sure it passes
