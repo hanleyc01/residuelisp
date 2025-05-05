@@ -13,7 +13,7 @@ from .common import ArrayC128
 from .fhrr import FHRR
 from .vsa import VSA
 
-DEFAULT_MODULI = [3, 5, 7, 13]
+DEFAULT_MODULI = [3, 5, 7, 11]
 
 
 class RHC(VSA[np.complex128]):
@@ -86,7 +86,7 @@ class RHC(VSA[np.complex128]):
     ) -> list[ArrayC128]:
         phis = []
         for i, mod in enumerate(moduli):
-            phis.append(np.exp(cmath.sqrt(-1)) * roots[i])
+            phis.append(np.exp(cmath.sqrt(-1) * roots[i]))
         return phis
 
     @staticmethod
@@ -107,8 +107,7 @@ class RHC(VSA[np.complex128]):
 
     @staticmethod
     def similarity(x: ArrayC128, y: ArrayC128) -> float:
-        # return float((np.dot(np.conjugate(x.T), y)) / x.size)
-        return abs(FHRR.similarity(x, y))
+        return np.dot(x, np.conjugate(y.T)).real / x.size
 
     @staticmethod
     def from_array(x: ArrayC128) -> RHC:
