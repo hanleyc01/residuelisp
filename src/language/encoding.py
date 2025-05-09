@@ -90,8 +90,8 @@ class CleanupMemory[T: (VSA[np.complex128], VSA[np.float64])]:
         self.memory_matrix[self.size, :] = x.data
         self.size += 1
 
-        if name is not None:
-            print(f"stored {name} at row {self.size-1}", file=sys.stderr)
+        # if name is not None:
+        #     print(f"stored {name} at row {self.size-1}", file=sys.stderr)
 
         return x
 

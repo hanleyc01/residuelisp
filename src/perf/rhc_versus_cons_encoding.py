@@ -66,19 +66,15 @@ def perf() -> None:
     rhc_bind: list[tuple[float, int]] = iterated_rhc_bind(
         dim=dim, iterations=num_iterations
     )
-    times = [time for time, _ in rhc_bind]
+    times = [time * 1000 for time, _ in rhc_bind]
     iterations = [iteration for _, iteration in rhc_bind]
-    plt.plot(iterations, times)
-    plt.title(f"Number of RHC adds versus time to execute, $D$ = {dim}")
-    plt.xlabel("Iteration no.")
-    plt.ylabel("Time (msec)")
-    plt.show()
-
+    plt.rcParams["font.family"] = "Times New Roman"
+    plt.plot(iterations, times, color="BLACK", linestyle="dashed", label="RHC Integers")
     iter_cons = iterated_cons_add(dim=dim, iterations=num_iterations)
     times = [time * 1000 for time, _ in iter_cons]
     iterations = [iteration for _, iteration in iter_cons]
-    plt.plot(iterations, times)
-    plt.title(f"Number of List adds versus time to execute, $D$ = {dim}")
-    plt.xlabel("Iteration no.")
+    plt.plot(iterations, times, color="BLACK", label="List Integers")
+    plt.xlabel("Number of additions")
     plt.ylabel("Time (msec)")
+    plt.legend()
     plt.show()
