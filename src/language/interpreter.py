@@ -263,6 +263,27 @@ def cons[T: (
     return ptr
 
 
+# compare by value two vector symbols
+def _equals[T: (
+    VSA[np.complex128],
+    VSA[np.float64],
+)](lhs: T, rhs: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+    lhs_is_atomic = check_atomic(lhs, enc_env)
+    rhs_is_atomic = check_atomic(rhs, enc_env)
+
+    if is_approx_eq(lhs_is_atomic, enc_env.codebook["#t"], enc_env) and is_approx_eq(
+        lhs_is_atomic, enc_env.codebook["#t"], enc_env
+    ):
+        return (
+            enc_env.codebook["#t"]
+            if is_approx_eq(lhs, rhs, enc_env)
+            else enc_env.codebook["#f"]
+        )
+
+    else:
+        raise Exception("TODO")
+
+
 def eq[T: (
     VSA[np.complex128],
     VSA[np.float64],
@@ -280,7 +301,14 @@ def eq[T: (
     Raises:
         `InterpreterError`.
     """
-    raise Exception("TODO")
+    car_ = car(rand, enc_env, eval_env)
+    ecar = evaluate(car_, enc_env, eval_env)
+
+    cdr_ = cdr(rand, enc_env, eval_env)
+    cadr = car(cdr_, enc_env, eval_env)
+    ecadr = evaluate(cadr, enc_env, eval_env)
+
+    return _equals(ecar, ecadr, enc_env, eval_env)
 
 
 def atom[T: (
@@ -392,12 +420,13 @@ def list_add[T: (
     lhs = car(rand, enc_env, eval_env)
 
     cdr_ = cdr(rand, enc_env, eval_env)  # discard the final `nil` of the list
-    rhs = car(cdr_, enc_env, eval_env)
+    cadr_ = car(cdr_, enc_env, eval_env)
+    ecadr = evaluate(cadr_, enc_env, eval_env)
 
-    if is_nil(rhs, enc_env):
+    if is_nil(ecadr, enc_env):
         return lhs
     else:
-        y = cdr(rhs, enc_env, eval_env)
+        y = cdr(ecadr, enc_env, eval_env)
         rand_ = make_cons(lhs, y, enc_env)
         return make_cons(enc_env.codebook["nil"], rand_, enc_env)
 
