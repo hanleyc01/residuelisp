@@ -56,9 +56,9 @@ def is_approx_eq[T: (
         `True` iff the similarity between the `x` and `y` is greater than
         `floor`, `False` otherwise.
     """
-    # print("is_approx_eq call", file=sys.stderr)
+    print("is_approx_eq call", file=sys.stderr)
     similarity = abs(env.vsa.similarity(x.data, y.data))
-    # print(f"\tsimilarity = {similarity}", file=sys.stderr)
+    print(f"\tsimilarity = {similarity}", file=sys.stderr)
     return similarity > floor
 
 
@@ -115,7 +115,7 @@ def check_atomic[T: (
     VSA[np.float64],
 )](expr: T, enc_env: EncodingEnvironment[T], floor: float = 0.2,) -> T:
     """Determine whether or not a value is an atomic value or a list."""
-    # print("check_atomic_call", file=sys.stderr)
+    print("check_atomic_call", file=sys.stderr)
     value = enc_env.associative_memory.deref(expr)
     if value is None:
         return enc_env.codebook["#t"]
@@ -195,7 +195,7 @@ def car[T: (
     Raises:
         `InterpreterError`.
     """
-    # print("car call", file=sys.stderr)
+    print("car call", file=sys.stderr)
     value = enc_env.associative_memory.deref(expr)
     if value is None:
         raise InterpreterError("Segmentation fault in car hehe")
@@ -224,7 +224,7 @@ def cdr[T: (
     Raises:
         `InterpreterError`.
     """
-    # print("cdr call", file=sys.stderr)
+    print("cdr call", file=sys.stderr)
     value = enc_env.associative_memory.deref(expr)
     if value is None:
         raise InterpreterError("Segmentation fault in cdr hehe")
@@ -261,6 +261,33 @@ def cons[T: (
 
     ptr = make_cons(ecar, ecadr, enc_env)
     return ptr
+
+
+def _and_[T: (
+    VSA[np.complex128],
+    VSA[np.float64],
+)](lhs: T, rhs: T, enc_env: EncodingEnvironment[T]) -> bool:
+    return not (is_nil(lhs, enc_env) or is_false(lhs, enc_env)) and not (
+        is_nil(lhs, enc_env) or is_false(lhs, enc_env)
+    )
+
+
+def and_[T: (
+    VSA[np.complex128],
+    VSA[np.float64],
+)](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+    car_ = car(rand, enc_env, eval_env)
+    ecar = evaluate(car_, enc_env, eval_env)
+
+    cdr_ = cdr(rand, enc_env, eval_env)
+    cadr = car(cdr_, enc_env, eval_env)
+    ecadr = evaluate(cadr, enc_env, eval_env)
+
+    return (
+        enc_env.codebook["#t"]
+        if _and_(ecar, ecadr, enc_env)
+        else enc_env.codebook["#f"]
+    )
 
 
 # compare by value two vector symbols
@@ -579,7 +606,7 @@ def make_function_pointer[T: (
         A semantic pointer in the encoding environment that points to a
         function body chunk.
     """
-    # print("make_function_pointer call", file=sys.stderr)
+    print("make_function_pointer call", file=sys.stderr)
     tagged_args = enc_env.vsa.bind(args.data, enc_env.codebook["__args"].data)
     tagged_body = enc_env.vsa.bind(body.data, enc_env.codebook["__body"].data)
     function_tag = enc_env.codebook["__func"].data
@@ -609,7 +636,7 @@ def evaluate_lambda[T: (
         A semantic function pointer in `enc_env.associative_memory` which
         points to a function chunk.
     """
-    # print("evaluate_lambda call", file=sys.stderr)
+    print("evaluate_lambda call", file=sys.stderr)
     args = car(function_body, enc_env, eval_env)
     body = cdr(function_body, enc_env, eval_env)
     return make_function_pointer(args, body, enc_env, eval_env)
@@ -632,7 +659,7 @@ def evaluate_define[T: (
     Raises:
         `InterpreterError`.
     """
-    # print("evaluate_define call", file=sys.stderr)
+    print("evaluate_define call", file=sys.stderr)
     name = car(define_body, enc_env, eval_env)
     body = car(cdr(define_body, enc_env, eval_env), enc_env, eval_env)
     eval_env.define_mem.associate(name, body)
@@ -662,7 +689,7 @@ def evaluate_application[T: (
     Raises:
         `InterpreterError`.
     """
-    # print("evaluate_application call", file=sys.stderr)
+    print("evaluate_application call", file=sys.stderr)
     operator_v: T
     if (eval_env.locals_ is not None) and (
         mayb_local_val := eval_env.locals_.deref(rator)
@@ -675,63 +702,66 @@ def evaluate_application[T: (
     operator_v = enc_env.cleanup_memory.recall(operator_v)
 
     if is_approx_eq(operator_v, enc_env.codebook["car"], enc_env):
-        # print("closest to `car`", file=sys.stderr)
+        print("closest to `car`", file=sys.stderr)
         # we evaluate the result of the operation, as we are not doing
         # syntactic manipulation.
         car_ = car(rand, enc_env, eval_env)
 
-        # if not is_nil(cdr(rand, enc_env, eval_env), enc_env):
-        # print(
-        # "WARNING: car takes only one argument, ignoring the rest!",
-        # file=sys.stderr,
-        # )
+        if not is_nil(cdr(rand, enc_env, eval_env), enc_env):
+            print(
+                "WARNING: car takes only one argument, ignoring the rest!",
+                file=sys.stderr,
+            )
 
         value = evaluate(car_, enc_env, eval_env)
         return car(value, enc_env, eval_env)
     elif is_approx_eq(operator_v, enc_env.codebook["cdr"], enc_env):
-        # print("closest to `cdr`", file=sys.stderr)
+        print("closest to `cdr`", file=sys.stderr)
         # ditto here
         car_ = car(rand, enc_env, eval_env)
 
-        # if not is_nil(cdr(rand, enc_env, eval_env), enc_env):
-        #     #print(
-        #         "WARNING: cdr takes only one argument, ignoring the rest!",
-        #         file=sys.stderr,
-        #     )
+        if not is_nil(cdr(rand, enc_env, eval_env), enc_env):
+            print(
+                "WARNING: cdr takes only one argument, ignoring the rest!",
+                file=sys.stderr,
+            )
 
         value = evaluate(car_, enc_env, eval_env)
         return cdr(value, enc_env, eval_env)
     elif is_approx_eq(operator_v, enc_env.codebook["cons"], enc_env):
-        # print("closest to `cons`", file=sys.stderr)
+        print("closest to `cons`", file=sys.stderr)
         return cons(rand, enc_env, eval_env)
     elif is_approx_eq(operator_v, enc_env.codebook["eq?"], enc_env):
-        # print("closest to `eq?`", file=sys.stderr)
+        print("closest to `eq?`", file=sys.stderr)
         return eq(rand, enc_env, eval_env)
     elif is_approx_eq(operator_v, enc_env.codebook["atom?"], enc_env):
-        # print("closest to `atom?`", file=sys.stderr)
+        print("closest to `atom?`", file=sys.stderr)
         return atom(rand, enc_env, eval_env)
+    elif is_approx_eq(operator_v, enc_env.codebook["and"], enc_env):
+        print("closest to `and`", file=sys.stderr)
+        return and_(rand, enc_env, eval_env)
     elif is_approx_eq(operator_v, enc_env.codebook["if"], enc_env):
-        # print("closest to `if`", file=sys.stderr)
+        print("closest to `if`", file=sys.stderr)
         return if_(rand, enc_env, eval_env)
     elif is_approx_eq(operator_v, enc_env.codebook["quote"], enc_env):
-        # print("closest to `quote`", file=sys.stderr)
+        print("closest to `quote`", file=sys.stderr)
         return quote(rand, enc_env, eval_env)
     elif is_approx_eq(operator_v, enc_env.codebook["+"], enc_env):
-        # print("closest to `+`", file=sys.stderr)
+        print("closest to `+`", file=sys.stderr)
         return add(rand, enc_env, eval_env)
     elif is_approx_eq(operator_v, enc_env.codebook["-"], enc_env):
-        # print("closest to `-`", file=sys.stderr)
+        print("closest to `-`", file=sys.stderr)
         return sub(rand, enc_env, eval_env)
     elif is_approx_eq(operator_v, enc_env.codebook["*"], enc_env):
-        # print("closest to `*`", file=sys.stderr)
+        print("closest to `*`", file=sys.stderr)
         return mul(rand, enc_env, eval_env)
     elif is_approx_eq(operator_v, enc_env.codebook["/"], enc_env):
-        # print("closest to `/`", file=sys.stderr)
+        print("closest to `/`", file=sys.stderr)
         return div(rand, enc_env, eval_env)
-    # elif is_approx_eq(
-    #     check_function(operator_v, enc_env), enc_env.codebook["#t"], enc_env
-    # ):
-    #     #print("is a function!", file=sys.stderr)
+    elif is_approx_eq(
+        check_function(operator_v, enc_env), enc_env.codebook["#t"], enc_env
+    ):
+        print("is a function!", file=sys.stderr)
     else:
         eval_rand = evaluate(rand, enc_env, eval_env)
         return make_cons(operator_v, eval_rand, enc_env)
@@ -756,26 +786,26 @@ def evaluate[T: (
     Raises:
         `InterpreterError`.
     """
-    # print("evaluate call", file=sys.stderr)
+    print("evaluate call", file=sys.stderr)
     if is_approx_eq(check_atomic(expr, enc_env), enc_env.codebook["#t"], enc_env):
-        # print("\texpression is an atom", file=sys.stderr)
+        print("\texpression is an atom", file=sys.stderr)
 
         # TODO: fix this to check first locals if available, then
         # fall through to define
         if eval_env.locals_ is None:
             res = eval_env.define_mem.deref(expr)
             if res is None:
-                # print("value not found in `define_mem`", file=sys.stderr)
+                print("value not found in `define_mem`", file=sys.stderr)
                 return expr
             return res
         else:
             res = eval_env.locals_.deref(expr)
             if res is None:
-                # print("value not found in `locals_`", file=sys.stderr)
+                print("value not found in `locals_`", file=sys.stderr)
                 return expr
             return res
 
-    # print("\texpression is non-atomic", file=sys.stderr)
+    print("\texpression is non-atomic", file=sys.stderr)
     head = car(expr, enc_env, eval_env)
     tail = cdr(expr, enc_env, eval_env)
 

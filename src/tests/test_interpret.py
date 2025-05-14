@@ -264,5 +264,44 @@ def test_equals_atomic_t(dim: int) -> None:
     assert is_approx_eq(value, enc_env.codebook["#t"], enc_env)
 
 
+def test_equals_non_atomic(dim: int) -> None:
+    vsa = FHRR
+    src = "(eq? (cons #t #t) (cons #t #t))"
+
+    enc_env = EncodingEnvironment(vsa=vsa, dim=dim)
+    eval_env = EvalEnvironment(AssociativeMemory(vsa=vsa, dim=dim), None)
+
+    encoded_value = encode(parse(lex(src)), enc_env)
+    value = evaluate(encoded_value, enc_env, eval_env)
+
+    assert is_approx_eq(value, enc_env.codebook["#t"], enc_env)
+
+
+def test_and(dim: int) -> None:
+    vsa = FHRR
+    src = "(and #t #t)"
+
+    enc_env = EncodingEnvironment(vsa=vsa, dim=dim)
+    eval_env = EvalEnvironment(AssociativeMemory(vsa=vsa, dim=dim), None)
+
+    encoded_value = encode(parse(lex(src)), enc_env)
+    value = evaluate(encoded_value, enc_env, eval_env)
+
+    assert is_approx_eq(value, enc_env.codebook["#t"], enc_env)
+
+
+def test_and_comp(dim: int) -> None:
+    vsa = FHRR
+    src = "(and (car (cons #t #t)) #t)"
+
+    enc_env = EncodingEnvironment(vsa=vsa, dim=dim)
+    eval_env = EvalEnvironment(AssociativeMemory(vsa=vsa, dim=dim), None)
+
+    encoded_value = encode(parse(lex(src)), enc_env)
+    value = evaluate(encoded_value, enc_env, eval_env)
+
+    assert is_approx_eq(value, enc_env.codebook["#t"], enc_env)
+
+
 def test_decode(dim: int) -> None:
     assert False
