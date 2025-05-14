@@ -263,6 +263,7 @@ def cons[T: (
     return ptr
 
 
+# test whether both arguments are non-nil and not-false
 def _and_[T: (
     VSA[np.complex128],
     VSA[np.float64],
@@ -276,6 +277,18 @@ def and_[T: (
     VSA[np.complex128],
     VSA[np.float64],
 )](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+    """Test whether or not the arguments are all true. Accepts only two
+    arguments.
+
+    Args:
+    -   rand (VSA): A vector-symbol list representing the arguments.
+    -   enc_env (EncodingEnvironment): The encoding environment.
+    -   eval_env (EvalEnvironment): The evaluation environment.
+
+    Returns:
+        `enc_env.codebook["#t"]` if the arguments are all true, otherwise
+        `enc_env.codebook["#f"]`.
+    """
     car_ = car(rand, enc_env, eval_env)
     ecar = evaluate(car_, enc_env, eval_env)
 
@@ -299,7 +312,7 @@ def _equals[T: (
     rhs_is_atomic = check_atomic(rhs, enc_env)
 
     if is_approx_eq(lhs_is_atomic, enc_env.codebook["#t"], enc_env) and is_approx_eq(
-        lhs_is_atomic, enc_env.codebook["#t"], enc_env
+        rhs_is_atomic, enc_env.codebook["#t"], enc_env
     ):
         return (
             enc_env.codebook["#t"]
@@ -307,8 +320,34 @@ def _equals[T: (
             else enc_env.codebook["#f"]
         )
 
+    elif (
+        is_approx_eq(lhs_is_atomic, enc_env.codebook["#t"], enc_env)
+        and is_approx_eq(rhs_is_atomic, enc_env.codebook["#f"], enc_env)
+    ) or (
+        is_approx_eq(lhs_is_atomic, enc_env.codebook["#f"], enc_env)
+        and is_approx_eq(rhs_is_atomic, enc_env.codebook["#t"], enc_env)
+    ):
+        return enc_env.codebook["#f"]
+
     else:
-        raise Exception("TODO")
+        lhs_car = car(lhs, enc_env, eval_env)
+        lhs_cdr = cdr(lhs, enc_env, eval_env)
+        lhs_ecar = evaluate(lhs_car, enc_env, eval_env)
+        lhs_ecdr = evaluate(lhs_cdr, enc_env, eval_env)
+
+        rhs_car = car(rhs, enc_env, eval_env)
+        rhs_cdr = cdr(rhs, enc_env, eval_env)
+        rhs_ecar = evaluate(rhs_car, enc_env, eval_env)
+        rhs_ecdr = evaluate(rhs_cdr, enc_env, eval_env)
+
+        car_eq = _equals(lhs_ecar, rhs_ecar, enc_env, eval_env)
+        cdr_eq = _equals(lhs_ecdr, rhs_ecdr, enc_env, eval_env)
+
+        return (
+            enc_env.codebook["#t"]
+            if _and_(car_eq, cdr_eq, enc_env)
+            else enc_env.codebook["#f"]
+        )
 
 
 def eq[T: (
