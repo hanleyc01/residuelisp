@@ -498,6 +498,37 @@ def list_add[T: (
         return make_cons(enc_env.codebook["nil"], rand_, enc_env)
 
 
+def list_sub[T: (
+    VSA[np.complex128],
+    VSA[np.float64],
+)](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+    """List subtraction.
+
+    ```
+    sub (x, nil)          = x
+    sub ((cons nil x), (cons nil y)) = sub (x, y)
+    sub (nil, y)          = nil
+    ```
+    """
+    car_ = car(rand, enc_env, eval_env)
+
+    lhs = evaluate(car_, enc_env, eval_env)
+
+    cdr_ = cdr(rand, enc_env, eval_env)
+    cadr_ = car(cdr_, enc_env, eval_env)
+    rhs = evaluate(cdr_, enc_env, eval_env)
+
+    if is_nil(lhs, enc_env):
+        return enc_env.codebook["nil"]
+    elif is_nil(rhs, enc_env):
+        return lhs
+    else:
+        lhs_car = car(lhs, enc_env, eval_env)
+        rhs_car = car(rhs, enc_env, eval_env)
+        args = make_cons(lhs_car, rhs_car, enc_env)
+        return list_sub(args, enc_env, eval_env)
+
+
 def rhc_add[T: (
     VSA[np.complex128],
     VSA[np.float64],
@@ -563,7 +594,14 @@ def sub[T: (
     Returns:
         The difference of the two numbers, using the encoding scheme provided.
     """
-    raise Exception("TODO")
+    if enc_env.integer_encoding_scheme == IntegerEncodingScheme.ListIntegers:
+        return list_sub(rand, enc_env, eval_env)
+    elif enc_env.integer_encoding_scheme == IntegerEncodingScheme.RHCIntegers:
+        return rhc_sub(rand, enc_env, eval_env)
+    else:
+        raise InterpreterError(
+            f"Unknown integer format: {enc_env.integer_encoding_scheme}"
+        )
 
 
 def mul[T: (
