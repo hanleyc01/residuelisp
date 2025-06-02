@@ -304,7 +304,7 @@ def and_[T: (
 
 
 # compare by value two vector symbols
-def _equals[T: (
+def equals[T: (
     VSA[np.complex128],
     VSA[np.float64],
 )](lhs: T, rhs: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
@@ -340,8 +340,8 @@ def _equals[T: (
         rhs_ecar = evaluate(rhs_car, enc_env, eval_env)
         rhs_ecdr = evaluate(rhs_cdr, enc_env, eval_env)
 
-        car_eq = _equals(lhs_ecar, rhs_ecar, enc_env, eval_env)
-        cdr_eq = _equals(lhs_ecdr, rhs_ecdr, enc_env, eval_env)
+        car_eq = equals(lhs_ecar, rhs_ecar, enc_env, eval_env)
+        cdr_eq = equals(lhs_ecdr, rhs_ecdr, enc_env, eval_env)
 
         return (
             enc_env.codebook["#t"]
@@ -374,7 +374,7 @@ def eq[T: (
     cadr = car(cdr_, enc_env, eval_env)
     ecadr = evaluate(cadr, enc_env, eval_env)
 
-    return _equals(ecar, ecadr, enc_env, eval_env)
+    return equals(ecar, ecadr, enc_env, eval_env)
 
 
 def atom[T: (
@@ -483,7 +483,8 @@ def list_add[T: (
     ```
     """
 
-    lhs = car(rand, enc_env, eval_env)
+    car_ = car(rand, enc_env, eval_env)
+    lhs = evaluate(car_, enc_env, eval_env)
 
     cdr_ = cdr(rand, enc_env, eval_env)  # discard the final `nil` of the list
     cadr_ = car(cdr_, enc_env, eval_env)
@@ -677,7 +678,8 @@ def evaluate_lambda[T: (
     """
     print("evaluate_lambda call", file=sys.stderr)
     args = car(function_body, enc_env, eval_env)
-    body = cdr(function_body, enc_env, eval_env)
+    cdr_ = cdr(function_body, enc_env, eval_env)
+    body = car(function_body, enc_env, eval_env)
     return make_function_pointer(args, body, enc_env, eval_env)
 
 
@@ -703,6 +705,31 @@ def evaluate_define[T: (
     body = car(cdr(define_body, enc_env, eval_env), enc_env, eval_env)
     eval_env.define_mem.associate(name, body)
     return enc_env.codebook["nil"]
+
+
+def evaluate_function_application[T: (
+    VSA[np.complex128],
+    VSA[np.float64],
+)](
+    operator: T,
+    operand: T,
+    enc_env: EncodingEnvironment[T],
+    eval_env: EvalEnvironment[T],
+) -> T:
+    """Evaluate an application of a user-defined lambda abstraction with a
+    list of arguments.
+
+    Args:
+    -   operator (VSA): A vector-symbol semantic function pointer.
+    -   operand (VSA): The arguments used in application to the semantic function pointer.
+    -   enc_env (EncodingEnvironment): The encoding environment.
+    -   eval_env (EvalEnvironment): The evaluation environment.
+
+    Returns:
+        The evaluated result of using the arguments as parameters in the function
+        body.
+    """
+    raise Exception("TODO")
 
 
 def evaluate_application[T: (
@@ -801,6 +828,7 @@ def evaluate_application[T: (
         check_function(operator_v, enc_env), enc_env.codebook["#t"], enc_env
     ):
         print("is a function!", file=sys.stderr)
+        return evaluate_function_application(operator_v, rand, enc_env, eval_env)
     else:
         eval_rand = evaluate(rand, enc_env, eval_env)
         return make_cons(operator_v, eval_rand, enc_env)
@@ -905,7 +933,17 @@ def decode[T: (
     if is_approx_eq(check_atomic(expr, enc_env), enc_env.codebook["#t"], enc_env):
         return closest(expr, enc_env)
     else:
-        return ""
+        car_ = car(expr, enc_env, eval_env)
+        cdr_ = cdr(expr, enc_env, eval_env)
+        left = decode(car_, enc_env, eval_env)
+        right = decode(cdr_, enc_env, eval_env)
+
+        if isinstance(right, list):
+            return [left, *right]  # type: ignore
+        elif right == "nil":
+            return [left]
+        else:
+            return (left, right)
 
 
 def interpret[T: (
