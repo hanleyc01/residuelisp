@@ -516,7 +516,7 @@ def list_sub[T: (
 
     cdr_ = cdr(rand, enc_env, eval_env)
     cadr_ = car(cdr_, enc_env, eval_env)
-    rhs = evaluate(cdr_, enc_env, eval_env)
+    rhs = evaluate(cadr_, enc_env, eval_env)
 
     if is_nil(lhs, enc_env):
         return enc_env.codebook["nil"]
@@ -525,11 +525,60 @@ def list_sub[T: (
     else:
         lhs_car = car(lhs, enc_env, eval_env)
         rhs_car = car(rhs, enc_env, eval_env)
-        args = make_cons(lhs_car, rhs_car, enc_env)
+        args = make_cons(
+            lhs_car, make_cons(rhs_car, enc_env.codebook["nil"], enc_env), enc_env
+        )
         return list_sub(args, enc_env, eval_env)
 
 
+def list_mul[T: (
+    VSA[np.complex128],
+    VSA[np.float64],
+)](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+    """List multiplication.
+
+    ```
+    mul (x, nil) = nil
+    mul (x, cons (nil, y)) = add (x, mul (x, y))
+    ```
+    """
+    car_ = car(rand, enc_env, eval_env)
+
+    lhs = evaluate(car_, enc_env, eval_env)
+
+    cdr_ = cdr(rand, enc_env, eval_env)
+    cadr_ = car(cdr_, enc_env, eval_env)
+    rhs = evaluate(cadr_, enc_env, eval_env)
+
+    if is_nil(rhs, enc_env):
+        return enc_env.codebook["nil"]
+    else:
+        y = cdr(rhs, enc_env, eval_env)
+        mul_args = make_cons(
+            lhs, make_cons(y, enc_env.codebook["nil"], enc_env), enc_env
+        )
+        multed = list_mul(mul_args, enc_env, eval_env)
+        add_args = make_cons(
+            lhs, make_cons(multed, enc_env.codebook["nil"], enc_env), enc_env
+        )
+        return list_add(add_args, enc_env, eval_env)
+
+
 def rhc_add[T: (
+    VSA[np.complex128],
+    VSA[np.float64],
+)](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+    raise Exception("TODO")
+
+
+def rhc_sub[T: (
+    VSA[np.complex128],
+    VSA[np.float64],
+)](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+    raise Exception("TODO")
+
+
+def rhc_mul[T: (
     VSA[np.complex128],
     VSA[np.float64],
 )](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
@@ -628,7 +677,14 @@ def mul[T: (
     Returns:
         The product of the two numbers, using the encoding scheme provided.
     """
-    raise Exception("TODO")
+    if enc_env.integer_encoding_scheme == IntegerEncodingScheme.ListIntegers:
+        return list_mul(rand, enc_env, eval_env)
+    elif enc_env.integer_encoding_scheme == IntegerEncodingScheme.RHCIntegers:
+        return rhc_mul(rand, enc_env, eval_env)
+    else:
+        raise InterpreterError(
+            f"Unknown integer format: {enc_env.integer_encoding_scheme}"
+        )
 
 
 def div[T: (

@@ -2,7 +2,8 @@ import sys
 
 import pytest
 
-from language import *
+from language.encoding import *
+from language.interpreter import *
 from vsa import FHRR, HRR
 
 
