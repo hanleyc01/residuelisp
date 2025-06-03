@@ -1,6 +1,10 @@
+import sys
+
 import pytest
 
-from language import *
+from language.encoding import *
+from language.interpreter import *
+from syntax.parser import lex, parse
 from vsa import FHRR, HRR
 
 
@@ -13,6 +17,23 @@ def test_encoding0() -> None:
     assert True
 
 
-def test_number() -> None:
+def test_number1(dim: int) -> None:
     vsa = FHRR
     src = "1"
+
+    enc_env = EncodingEnvironment(vsa=vsa, dim=dim)
+    eval_env = EvalEnvironment(AssociativeMemory(vsa=vsa, dim=dim), None)
+
+    value = encode(parse(lex(src)), enc_env)
+
+    print(decode(value, enc_env, eval_env), file=sys.stderr)
+    assert is_nil(car(value, enc_env, eval_env), enc_env)
+    assert is_nil(cdr(value, enc_env, eval_env), enc_env)
+
+
+def test_all_numbers(dim: int) -> None:
+    vsa = FHRR
+    enc_env = EncodingEnvironment(vsa=vsa, dim=dim)
+    eval_env = EvalEnvironment(AssociativeMemory(vsa=vsa, dim=dim), None)
+
+    assert True

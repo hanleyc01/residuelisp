@@ -46,6 +46,7 @@ class TokenKind(Enum):
     Quote = auto()
     Car = auto()
     Cdr = auto()
+    IsInt = auto()
 
     def __str__(self) -> str:
         return self.name
@@ -65,6 +66,7 @@ KEYWORDS = {
     "let": TokenKind.Let,
     "eq?": TokenKind.Eq,
     "atom?": TokenKind.Atom,
+    "int?": TokenKind.IsInt,
     "quote": TokenKind.Quote,
 }
 """Reserved keywords."""

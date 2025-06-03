@@ -103,3 +103,7 @@ def test_car() -> None:
 
 def test_cdr() -> None:
     assert token_eq("cdr", TokenKind.Cdr)
+
+
+def test_is_int() -> None:
+    assert token_eq("int?", TokenKind.IsInt)

@@ -4,12 +4,12 @@ symbols.
 
 import sys
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 
 from syntax import KEYWORDS, OPERATORS, lex, parse
-from vsa import VSA
+from vsa import RHC, VSA
 
 from .encoding import (AssociativeMemory, EncodingEnvironment,
                        IntegerEncodingScheme, encode, make_cons)
@@ -304,7 +304,7 @@ def and_[T: (
 
 
 # compare by value two vector symbols
-def _equals[T: (
+def equals[T: (
     VSA[np.complex128],
     VSA[np.float64],
 )](lhs: T, rhs: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
@@ -340,8 +340,8 @@ def _equals[T: (
         rhs_ecar = evaluate(rhs_car, enc_env, eval_env)
         rhs_ecdr = evaluate(rhs_cdr, enc_env, eval_env)
 
-        car_eq = _equals(lhs_ecar, rhs_ecar, enc_env, eval_env)
-        cdr_eq = _equals(lhs_ecdr, rhs_ecdr, enc_env, eval_env)
+        car_eq = equals(lhs_ecar, rhs_ecar, enc_env, eval_env)
+        cdr_eq = equals(lhs_ecdr, rhs_ecdr, enc_env, eval_env)
 
         return (
             enc_env.codebook["#t"]
@@ -374,7 +374,7 @@ def eq[T: (
     cadr = car(cdr_, enc_env, eval_env)
     ecadr = evaluate(cadr, enc_env, eval_env)
 
-    return _equals(ecar, ecadr, enc_env, eval_env)
+    return equals(ecar, ecadr, enc_env, eval_env)
 
 
 def atom[T: (
@@ -396,6 +396,23 @@ def atom[T: (
     """
     arg = car(rand, enc_env, eval_env)
     return check_atomic(arg, enc_env)
+
+
+def int_[T: (
+    VSA[np.complex128],
+    VSA[np.float64],
+)](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+    """Test whether the operand is an integer value or not.
+
+    Args:
+    -   rand (VSA): A vector-symbol list representing the arguments.
+    -   enc_env (EncodingEnvironment): The encoding environment.
+    -   eval_env (EvalEnvironment): The evaluation environment.
+
+    Returns:
+        True if the value is indeed atomic, false otherwise.
+    """
+    raise Exception("TODO")
 
 
 def if_[T: (
@@ -483,7 +500,8 @@ def list_add[T: (
     ```
     """
 
-    lhs = car(rand, enc_env, eval_env)
+    car_ = car(rand, enc_env, eval_env)
+    lhs = evaluate(car_, enc_env, eval_env)
 
     cdr_ = cdr(rand, enc_env, eval_env)  # discard the final `nil` of the list
     cadr_ = car(cdr_, enc_env, eval_env)
@@ -497,7 +515,132 @@ def list_add[T: (
         return make_cons(enc_env.codebook["nil"], rand_, enc_env)
 
 
+def list_sub[T: (
+    VSA[np.complex128],
+    VSA[np.float64],
+)](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+    """List subtraction.
+
+    ```
+    sub (x, nil)          = x
+    sub ((cons nil x), (cons nil y)) = sub (x, y)
+    sub (nil, y)          = nil
+    ```
+    """
+    car_ = car(rand, enc_env, eval_env)
+
+    lhs = evaluate(car_, enc_env, eval_env)
+
+    cdr_ = cdr(rand, enc_env, eval_env)
+    cadr_ = car(cdr_, enc_env, eval_env)
+    rhs = evaluate(cadr_, enc_env, eval_env)
+
+    if is_nil(lhs, enc_env):
+        return enc_env.codebook["nil"]
+    elif is_nil(rhs, enc_env):
+        return lhs
+    else:
+        lhs_car = car(lhs, enc_env, eval_env)
+        rhs_car = car(rhs, enc_env, eval_env)
+        args = make_cons(
+            lhs_car, make_cons(rhs_car, enc_env.codebook["nil"], enc_env), enc_env
+        )
+        return list_sub(args, enc_env, eval_env)
+
+
+def list_mul[T: (
+    VSA[np.complex128],
+    VSA[np.float64],
+)](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+    """List multiplication.
+
+    ```
+    mul (x, nil) = nil
+    mul (x, cons (nil, y)) = add (x, mul (x, y))
+    ```
+    """
+    car_ = car(rand, enc_env, eval_env)
+
+    lhs = evaluate(car_, enc_env, eval_env)
+
+    cdr_ = cdr(rand, enc_env, eval_env)
+    cadr_ = car(cdr_, enc_env, eval_env)
+    rhs = evaluate(cadr_, enc_env, eval_env)
+
+    if is_nil(rhs, enc_env):
+        return enc_env.codebook["nil"]
+    else:
+        y = cdr(rhs, enc_env, eval_env)
+        mul_args = make_cons(
+            lhs, make_cons(y, enc_env.codebook["nil"], enc_env), enc_env
+        )
+        multed = list_mul(mul_args, enc_env, eval_env)
+        add_args = make_cons(
+            lhs, make_cons(multed, enc_env.codebook["nil"], enc_env), enc_env
+        )
+        return list_add(add_args, enc_env, eval_env)
+
+
 def rhc_add[T: (
+    VSA[np.complex128],
+    VSA[np.float64],
+)](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+    """Add together two integer elements using Residue Hyperdimensional Computing.
+
+    Args:
+    -   rand (VSA): A vector-symbol list representing integer arguments.
+    -   enc_env (EncodingEnvironment): The encoding environment.
+    -   eval_env (EvalEnvironment): The evaluation environment.
+
+    Returns:
+        The result of the addition as a number.
+    """
+    car_ = car(rand, enc_env, eval_env)
+    lhs = evaluate(car_, enc_env, eval_env)
+
+    cdr_ = cdr(rand, enc_env, eval_env)
+    cadr_ = car(cdr_, enc_env, eval_env)
+    rhs = evaluate(cadr_, enc_env, eval_env)
+
+    unwrapped_lhs = cast(T, lhs - enc_env.codebook["__int"])  # type: ignore
+    unwrapped_rhs = cast(T, rhs - enc_env.codebook["__int"])  # type: ignore
+    return (lhs * rhs) + enc_env.codebook["__int"]  # type: ignore
+
+
+def rhc_sub[T: (
+    VSA[np.complex128],
+    VSA[np.float64],
+)](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+    """Subtract the argument list using RHC.
+
+    Args:
+    -   rand (VSA): A vector-symbol list representing integer arguments.
+    -   enc_env (EncodingEnvironment): The encoding environment.
+    -   eval_env (EvalEnvironment): The evaluation environment.
+
+    Returns:
+        The result of the subtraction as a number.
+    """
+    car_ = car(rand, enc_env, eval_env)
+    lhs = evaluate(car_, enc_env, eval_env)
+
+    cdr_ = cdr(rand, enc_env, eval_env)
+    cadr_ = car(cdr_, enc_env, eval_env)
+    rhs = evaluate(cadr_, enc_env, eval_env)
+
+    unwrapped_lhs = cast(T, lhs - enc_env.codebook["__int"])  # type: ignore
+    unwrapped_rhs = cast(T, rhs - enc_env.codebook["__int"])  # type: ignore
+    return (lhs / rhs) + enc_env.codebook["__int"]  # type: ignore
+
+
+def rhc_mul[T: (
+    VSA[np.complex128],
+    VSA[np.float64],
+)](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+    raise Exception("TODO")
+
+
+def rhc_div[T: (
     VSA[np.complex128],
     VSA[np.float64],
 )](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
@@ -562,7 +705,14 @@ def sub[T: (
     Returns:
         The difference of the two numbers, using the encoding scheme provided.
     """
-    raise Exception("TODO")
+    if enc_env.integer_encoding_scheme == IntegerEncodingScheme.ListIntegers:
+        return list_sub(rand, enc_env, eval_env)
+    elif enc_env.integer_encoding_scheme == IntegerEncodingScheme.RHCIntegers:
+        return rhc_sub(rand, enc_env, eval_env)
+    else:
+        raise InterpreterError(
+            f"Unknown integer format: {enc_env.integer_encoding_scheme}"
+        )
 
 
 def mul[T: (
@@ -589,7 +739,14 @@ def mul[T: (
     Returns:
         The product of the two numbers, using the encoding scheme provided.
     """
-    raise Exception("TODO")
+    if enc_env.integer_encoding_scheme == IntegerEncodingScheme.ListIntegers:
+        return list_mul(rand, enc_env, eval_env)
+    elif enc_env.integer_encoding_scheme == IntegerEncodingScheme.RHCIntegers:
+        return rhc_mul(rand, enc_env, eval_env)
+    else:
+        raise InterpreterError(
+            f"Unknown integer format: {enc_env.integer_encoding_scheme}"
+        )
 
 
 def div[T: (
@@ -616,7 +773,14 @@ def div[T: (
     Returns:
         The fraction of the two numbers, using the encoding scheme provided.
     """
-    raise Exception("TODO")
+    if enc_env.integer_encoding_scheme == IntegerEncodingScheme.ListIntegers:
+        raise NotImplementedError("Division is not implemented for List integers!")
+    elif enc_env.integer_encoding_scheme == IntegerEncodingScheme.RHCIntegers:
+        return rhc_div(rand, enc_env, eval_env)
+    else:
+        raise InterpreterError(
+            f"Unknown integer format: {enc_env.integer_encoding_scheme}"
+        )
 
 
 def make_function_pointer[T: (
@@ -677,7 +841,8 @@ def evaluate_lambda[T: (
     """
     print("evaluate_lambda call", file=sys.stderr)
     args = car(function_body, enc_env, eval_env)
-    body = cdr(function_body, enc_env, eval_env)
+    cdr_ = cdr(function_body, enc_env, eval_env)
+    body = car(function_body, enc_env, eval_env)
     return make_function_pointer(args, body, enc_env, eval_env)
 
 
@@ -703,6 +868,31 @@ def evaluate_define[T: (
     body = car(cdr(define_body, enc_env, eval_env), enc_env, eval_env)
     eval_env.define_mem.associate(name, body)
     return enc_env.codebook["nil"]
+
+
+def evaluate_function_application[T: (
+    VSA[np.complex128],
+    VSA[np.float64],
+)](
+    operator: T,
+    operand: T,
+    enc_env: EncodingEnvironment[T],
+    eval_env: EvalEnvironment[T],
+) -> T:
+    """Evaluate an application of a user-defined lambda abstraction with a
+    list of arguments.
+
+    Args:
+    -   operator (VSA): A vector-symbol semantic function pointer.
+    -   operand (VSA): The arguments used in application to the semantic function pointer.
+    -   enc_env (EncodingEnvironment): The encoding environment.
+    -   eval_env (EvalEnvironment): The evaluation environment.
+
+    Returns:
+        The evaluated result of using the arguments as parameters in the function
+        body.
+    """
+    raise Exception("TODO")
 
 
 def evaluate_application[T: (
@@ -740,6 +930,10 @@ def evaluate_application[T: (
         operator_v = rator
     operator_v = enc_env.cleanup_memory.recall(operator_v)
 
+    # if RHC encoding, test if it is an integer
+    if enc_env.integer_encoding_scheme == IntegerEncodingScheme.RHCIntegers:
+        pass
+
     if is_approx_eq(operator_v, enc_env.codebook["car"], enc_env):
         print("closest to `car`", file=sys.stderr)
         # we evaluate the result of the operation, as we are not doing
@@ -776,6 +970,9 @@ def evaluate_application[T: (
     elif is_approx_eq(operator_v, enc_env.codebook["atom?"], enc_env):
         print("closest to `atom?`", file=sys.stderr)
         return atom(rand, enc_env, eval_env)
+    elif is_approx_eq(operator_v, enc_env.codebook["int?"], enc_env):
+        print("closest to `int?`", file=sys.stderr)
+        return int_(rand, enc_env, eval_env)
     elif is_approx_eq(operator_v, enc_env.codebook["and"], enc_env):
         print("closest to `and`", file=sys.stderr)
         return and_(rand, enc_env, eval_env)
@@ -801,6 +998,7 @@ def evaluate_application[T: (
         check_function(operator_v, enc_env), enc_env.codebook["#t"], enc_env
     ):
         print("is a function!", file=sys.stderr)
+        return evaluate_function_application(operator_v, rand, enc_env, eval_env)
     else:
         eval_rand = evaluate(rand, enc_env, eval_env)
         return make_cons(operator_v, eval_rand, enc_env)
@@ -905,7 +1103,17 @@ def decode[T: (
     if is_approx_eq(check_atomic(expr, enc_env), enc_env.codebook["#t"], enc_env):
         return closest(expr, enc_env)
     else:
-        return ""
+        car_ = car(expr, enc_env, eval_env)
+        cdr_ = cdr(expr, enc_env, eval_env)
+        left = decode(car_, enc_env, eval_env)
+        right = decode(cdr_, enc_env, eval_env)
+
+        if isinstance(right, list):
+            return [left, *right]  # type: ignore
+        elif right == "nil":
+            return [left]
+        else:
+            return (left, right)
 
 
 def interpret[T: (
