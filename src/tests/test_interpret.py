@@ -298,16 +298,40 @@ def test_list_mul(dim: int) -> None:
     assert is_true(equals(value, encoded_result, enc_env, eval_env), enc_env)
 
 
-def test_list_div(dim: int) -> None:
-    assert False
-
-
 def test_rhc_add(dim: int) -> None:
-    assert False
+    src = "(+ 1 2)"
+    result = "3"
+
+    vsa = FHRR
+    enc_env = EncodingEnvironment(
+        vsa=vsa, dim=dim, integer_encoding_scheme=IntegerEncodingScheme.RHCIntegers
+    )
+    eval_env = EvalEnvironment(AssociativeMemory(vsa=vsa, dim=dim), None)
+
+    encoded_value = encode(parse(lex(src)), enc_env)
+    encoded_result = encode(parse(lex(result)), enc_env)
+
+    value = evaluate(encoded_value, enc_env, eval_env)
+
+    assert is_true(equals(value, encoded_result, enc_env, eval_env), enc_env)
 
 
 def test_rhc_sub(dim: int) -> None:
-    assert False
+    src = "(- 5 2)"
+    result = "3"
+
+    vsa = FHRR
+    enc_env = EncodingEnvironment(
+        vsa=vsa, dim=dim, integer_encoding_scheme=IntegerEncodingScheme.RHCIntegers
+    )
+    eval_env = EvalEnvironment(AssociativeMemory(vsa=vsa, dim=dim), None)
+
+    encoded_value = encode(parse(lex(src)), enc_env)
+    encoded_result = encode(parse(lex(result)), enc_env)
+
+    value = evaluate(encoded_value, enc_env, eval_env)
+
+    assert is_true(equals(value, encoded_result, enc_env, eval_env), enc_env)
 
 
 def test_rhc_mul(dim: int) -> None:
@@ -388,4 +412,8 @@ def test_and_comp(dim: int) -> None:
 
 
 def test_decode(dim: int) -> None:
+    assert False
+
+
+def test_is_int(dim: int) -> None:
     assert False

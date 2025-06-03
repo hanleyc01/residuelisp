@@ -266,6 +266,9 @@ class EncodingEnvironment[T: (VSA[np.complex128], VSA[np.float64])]:
         codebook["__body"] = vsa.new(dim)
         codebook["__func"] = vsa.new(dim)
 
+        # integers
+        codebook["__int"] = vsa.new(dim)
+
         return codebook
 
 
@@ -317,7 +320,22 @@ def encode_rhc_integer[T: (
     VSA[np.complex128],
     VSA[np.float64],
 )](cont: str, env: EncodingEnvironment[T]) -> T:
-    raise EncodingError("TODO")
+    """Encode an integer using RHC.
+
+    Args:
+    -   cont (str): A string that is an integer.
+    -   env (EncodingEnvironment): The encoding environment.
+    """
+    try:
+        conti = int(cont)
+    except:
+        raise EncodingError(f"`{cont}` is not a valid integer!")
+
+    if conti < 0:
+        raise EncodingError(f"{conti} is expected to be a positive number, sorry!")
+
+    else:
+        return env.vsa.bundle(RHC.encode(env.dim, conti), env.codebook["__int"])  # type: ignore
 
 
 def encode_atom[T: (

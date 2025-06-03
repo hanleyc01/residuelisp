@@ -4,6 +4,7 @@ import pytest
 
 from language.encoding import *
 from language.interpreter import *
+from syntax.parser import lex, parse
 from vsa import FHRR, HRR
 
 

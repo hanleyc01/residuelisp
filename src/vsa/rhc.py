@@ -152,10 +152,19 @@ class RHC(VSA[np.complex128]):
     def __hash__(self) -> int:
         return hash(self.data.tobytes())
 
-    def __add__(self, rhs: RHC | float | int | complex) -> RHC:
+    def __add__(
+        self, rhs: RHC | VSA[np.complex128] | VSA[np.float64] | float | int | complex
+    ) -> RHC:
         if isinstance(rhs, RHC):
             return RHC(
                 RHC.bundle(self.data, rhs.data),
+                moduli=self.moduli,
+                phis=self.phis,
+                roots=self.roots,
+            )
+        if isinstance(rhs, VSA):
+            return RHC(
+                self.data + rhs.data,
                 moduli=self.moduli,
                 phis=self.phis,
                 roots=self.roots,
@@ -167,10 +176,43 @@ class RHC(VSA[np.complex128]):
         else:
             raise TypeError(f"Inappropriate argument type: {type(rhs)}")
 
-    def __radd__(self, rhs: RHC | float | int | complex) -> RHC:
+    def __sub__(
+        self, rhs: RHC | VSA[np.complex128] | VSA[np.float64] | float | int | complex
+    ) -> RHC:
+        if isinstance(rhs, RHC):
+            return RHC(
+                self.data - rhs.data,
+                moduli=self.moduli,
+                phis=self.phis,
+                roots=self.roots,
+            )
+        if isinstance(rhs, VSA):
+            return RHC(
+                self.data - rhs.data,
+                moduli=self.moduli,
+                phis=self.phis,
+                roots=self.roots,
+            )
+        elif isinstance(rhs, float) or isinstance(rhs, int) or isinstance(rhs, complex):
+            return RHC(
+                self.data - rhs, roots=self.roots, moduli=self.moduli, phis=self.phis
+            )
+        else:
+            raise TypeError(f"Inappropriate argument type: {type(rhs)}")
+
+    def __radd__(
+        self, rhs: RHC | VSA[np.complex128] | VSA[np.float64] | float | int | complex
+    ) -> RHC:
         if isinstance(rhs, RHC):
             return RHC(
                 RHC.bundle(self.data, rhs.data),
+                moduli=self.moduli,
+                phis=self.phis,
+                roots=self.roots,
+            )
+        elif isinstance(rhs, VSA):
+            return RHC(
+                self.data + rhs.data,
                 moduli=self.moduli,
                 phis=self.phis,
                 roots=self.roots,

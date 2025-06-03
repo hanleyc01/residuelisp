@@ -4,12 +4,12 @@ symbols.
 
 import sys
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 
 from syntax import KEYWORDS, OPERATORS, lex, parse
-from vsa import VSA
+from vsa import RHC, VSA
 
 from .encoding import (AssociativeMemory, EncodingEnvironment,
                        IntegerEncodingScheme, encode, make_cons)
@@ -398,6 +398,23 @@ def atom[T: (
     return check_atomic(arg, enc_env)
 
 
+def int_[T: (
+    VSA[np.complex128],
+    VSA[np.float64],
+)](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+    """Test whether the operand is an integer value or not.
+
+    Args:
+    -   rand (VSA): A vector-symbol list representing the arguments.
+    -   enc_env (EncodingEnvironment): The encoding environment.
+    -   eval_env (EvalEnvironment): The evaluation environment.
+
+    Returns:
+        True if the value is indeed atomic, false otherwise.
+    """
+    raise Exception("TODO")
+
+
 def if_[T: (
     VSA[np.complex128],
     VSA[np.float64],
@@ -568,17 +585,62 @@ def rhc_add[T: (
     VSA[np.complex128],
     VSA[np.float64],
 )](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
-    raise Exception("TODO")
+    """Add together two integer elements using Residue Hyperdimensional Computing.
+
+    Args:
+    -   rand (VSA): A vector-symbol list representing integer arguments.
+    -   enc_env (EncodingEnvironment): The encoding environment.
+    -   eval_env (EvalEnvironment): The evaluation environment.
+
+    Returns:
+        The result of the addition as a number.
+    """
+    car_ = car(rand, enc_env, eval_env)
+    lhs = evaluate(car_, enc_env, eval_env)
+
+    cdr_ = cdr(rand, enc_env, eval_env)
+    cadr_ = car(cdr_, enc_env, eval_env)
+    rhs = evaluate(cadr_, enc_env, eval_env)
+
+    unwrapped_lhs = cast(T, lhs - enc_env.codebook["__int"])  # type: ignore
+    unwrapped_rhs = cast(T, rhs - enc_env.codebook["__int"])  # type: ignore
+    return (lhs * rhs) + enc_env.codebook["__int"]  # type: ignore
 
 
 def rhc_sub[T: (
     VSA[np.complex128],
     VSA[np.float64],
 )](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
-    raise Exception("TODO")
+    """Subtract the argument list using RHC.
+
+    Args:
+    -   rand (VSA): A vector-symbol list representing integer arguments.
+    -   enc_env (EncodingEnvironment): The encoding environment.
+    -   eval_env (EvalEnvironment): The evaluation environment.
+
+    Returns:
+        The result of the subtraction as a number.
+    """
+    car_ = car(rand, enc_env, eval_env)
+    lhs = evaluate(car_, enc_env, eval_env)
+
+    cdr_ = cdr(rand, enc_env, eval_env)
+    cadr_ = car(cdr_, enc_env, eval_env)
+    rhs = evaluate(cadr_, enc_env, eval_env)
+
+    unwrapped_lhs = cast(T, lhs - enc_env.codebook["__int"])  # type: ignore
+    unwrapped_rhs = cast(T, rhs - enc_env.codebook["__int"])  # type: ignore
+    return (lhs / rhs) + enc_env.codebook["__int"]  # type: ignore
 
 
 def rhc_mul[T: (
+    VSA[np.complex128],
+    VSA[np.float64],
+)](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+    raise Exception("TODO")
+
+
+def rhc_div[T: (
     VSA[np.complex128],
     VSA[np.float64],
 )](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
@@ -711,7 +773,14 @@ def div[T: (
     Returns:
         The fraction of the two numbers, using the encoding scheme provided.
     """
-    raise Exception("TODO")
+    if enc_env.integer_encoding_scheme == IntegerEncodingScheme.ListIntegers:
+        raise NotImplementedError("Division is not implemented for List integers!")
+    elif enc_env.integer_encoding_scheme == IntegerEncodingScheme.RHCIntegers:
+        return rhc_div(rand, enc_env, eval_env)
+    else:
+        raise InterpreterError(
+            f"Unknown integer format: {enc_env.integer_encoding_scheme}"
+        )
 
 
 def make_function_pointer[T: (
@@ -861,6 +930,10 @@ def evaluate_application[T: (
         operator_v = rator
     operator_v = enc_env.cleanup_memory.recall(operator_v)
 
+    # if RHC encoding, test if it is an integer
+    if enc_env.integer_encoding_scheme == IntegerEncodingScheme.RHCIntegers:
+        pass
+
     if is_approx_eq(operator_v, enc_env.codebook["car"], enc_env):
         print("closest to `car`", file=sys.stderr)
         # we evaluate the result of the operation, as we are not doing
@@ -897,6 +970,9 @@ def evaluate_application[T: (
     elif is_approx_eq(operator_v, enc_env.codebook["atom?"], enc_env):
         print("closest to `atom?`", file=sys.stderr)
         return atom(rand, enc_env, eval_env)
+    elif is_approx_eq(operator_v, enc_env.codebook["int?"], enc_env):
+        print("closest to `int?`", file=sys.stderr)
+        return int_(rand, enc_env, eval_env)
     elif is_approx_eq(operator_v, enc_env.codebook["and"], enc_env):
         print("closest to `and`", file=sys.stderr)
         return and_(rand, enc_env, eval_env)
