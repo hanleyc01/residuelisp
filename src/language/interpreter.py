@@ -3,8 +3,9 @@ symbols.
 """
 
 import sys
+from copy import deepcopy
 from dataclasses import dataclass
-from typing import Any, cast
+from typing import Any, Generic, TypeVar, cast
 
 import numpy as np
 
@@ -13,6 +14,8 @@ from vsa import RHC, VSA
 
 from .encoding import (AssociativeMemory, EncodingEnvironment,
                        IntegerEncodingScheme, encode, make_cons)
+
+T = TypeVar("T", VSA[np.complex128], VSA[np.float64])
 
 BASIC_FUNCTIONS = [
     word
@@ -30,7 +33,7 @@ class InterpreterError(Exception):
 
 
 @dataclass
-class EvalEnvironment[T: (VSA[np.complex128], VSA[np.float64])]:
+class EvalEnvironment(Generic[T]):
     """The evaluation environment, which contains a local associative memory
     for evaluation contexts, as well as a global definition memory, which
     remains constant throughout the evaluation of the program.
@@ -40,10 +43,7 @@ class EvalEnvironment[T: (VSA[np.complex128], VSA[np.float64])]:
     locals_: AssociativeMemory[T] | None
 
 
-def is_approx_eq[T: (
-    VSA[np.complex128],
-    VSA[np.float64],
-)](x: T, y: T, env: EncodingEnvironment[T], floor: float = 0.2) -> bool:
+def is_approx_eq(x: T, y: T, env: EncodingEnvironment[T], floor: float = 0.2) -> bool:
     """Approximate equality between two vector symbols.
 
     Args:
@@ -62,10 +62,7 @@ def is_approx_eq[T: (
     return similarity > floor
 
 
-def is_nil[T: (
-    VSA[np.complex128],
-    VSA[np.float64],
-)](value: T, enc_env: EncodingEnvironment[T], floor: float = 0.2) -> bool:
+def is_nil(value: T, enc_env: EncodingEnvironment[T], floor: float = 0.2) -> bool:
     """Test whether or not a value is `nil`.
 
     Args
@@ -78,10 +75,7 @@ def is_nil[T: (
     return is_approx_eq(value, enc_env.codebook["nil"], enc_env)
 
 
-def is_false[T: (
-    VSA[np.complex128],
-    VSA[np.float64],
-)](value: T, enc_env: EncodingEnvironment[T], floor: float = 0.2) -> bool:
+def is_false(value: T, enc_env: EncodingEnvironment[T], floor: float = 0.2) -> bool:
     """Test whether or not a value is `#f`.
 
     Args
@@ -94,10 +88,7 @@ def is_false[T: (
     return is_approx_eq(value, enc_env.codebook["#f"], enc_env)
 
 
-def is_true[T: (
-    VSA[np.complex128],
-    VSA[np.float64],
-)](value: T, enc_env: EncodingEnvironment[T], floor: float = 0.2) -> bool:
+def is_true(value: T, enc_env: EncodingEnvironment[T], floor: float = 0.2) -> bool:
     """Test whether or not a value is `#t`.
 
     Args
@@ -110,10 +101,11 @@ def is_true[T: (
     return is_approx_eq(value, enc_env.codebook["#t"], enc_env)
 
 
-def check_atomic[T: (
-    VSA[np.complex128],
-    VSA[np.float64],
-)](expr: T, enc_env: EncodingEnvironment[T], floor: float = 0.2,) -> T:
+def check_atomic(
+    expr: T,
+    enc_env: EncodingEnvironment[T],
+    floor: float = 0.2,
+) -> T:
     """Determine whether or not a value is an atomic value or a list."""
     print("check_atomic_call", file=sys.stderr)
     value = enc_env.associative_memory.deref(expr)
@@ -138,10 +130,11 @@ def check_atomic[T: (
     )
 
 
-def check_function[T: (
-    VSA[np.complex128],
-    VSA[np.float64],
-)](expr: T, enc_env: EncodingEnvironment[T], floor: float = 0.2,) -> T:
+def check_function(
+    expr: T,
+    enc_env: EncodingEnvironment[T],
+    floor: float = 0.2,
+) -> T:
     """Determine whether or not a value is a function by checking for the
     special function symbol. This involves dereferencing the function as a
     semantic function pointer, and inspecting the contents at the memory slot.
@@ -177,10 +170,7 @@ def check_function[T: (
     return cleanuped
 
 
-def car[T: (
-    VSA[np.complex128],
-    VSA[np.float64],
-)](expr: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+def car(expr: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
     """Treat the expression as a semantic pointer and dereference it, returning
     the second element of the underlying tuple chunk.
 
@@ -206,10 +196,7 @@ def car[T: (
     return recalled_value
 
 
-def cdr[T: (
-    VSA[np.complex128],
-    VSA[np.float64],
-)](expr: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+def cdr(expr: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
     """Treat the expression as a semantic pointer and dereference it,
     returning the first element of an underlying tuple chunk.
 
@@ -234,10 +221,7 @@ def cdr[T: (
     return recalled_value
 
 
-def cons[T: (
-    VSA[np.complex128],
-    VSA[np.float64],
-)](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+def cons(rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
     """Create a new tuple out of the operands. For more information about how
     this works, see `.language.interpreter.make_cons`.
 
@@ -264,19 +248,13 @@ def cons[T: (
 
 
 # test whether both arguments are non-nil and not-false
-def _and_[T: (
-    VSA[np.complex128],
-    VSA[np.float64],
-)](lhs: T, rhs: T, enc_env: EncodingEnvironment[T]) -> bool:
+def _and_(lhs: T, rhs: T, enc_env: EncodingEnvironment[T]) -> bool:
     return not (is_nil(lhs, enc_env) or is_false(lhs, enc_env)) and not (
         is_nil(lhs, enc_env) or is_false(lhs, enc_env)
     )
 
 
-def and_[T: (
-    VSA[np.complex128],
-    VSA[np.float64],
-)](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+def and_(rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
     """Test whether or not the arguments are all true. Accepts only two
     arguments.
 
@@ -304,10 +282,9 @@ def and_[T: (
 
 
 # compare by value two vector symbols
-def equals[T: (
-    VSA[np.complex128],
-    VSA[np.float64],
-)](lhs: T, rhs: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+def equals(
+    lhs: T, rhs: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
+) -> T:
     lhs_is_atomic = check_atomic(lhs, enc_env)
     rhs_is_atomic = check_atomic(rhs, enc_env)
 
@@ -350,10 +327,7 @@ def equals[T: (
         )
 
 
-def eq[T: (
-    VSA[np.complex128],
-    VSA[np.float64],
-)](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+def eq(rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
     """Compare two values to see if they are the same.
 
     Args:
@@ -377,10 +351,7 @@ def eq[T: (
     return equals(ecar, ecadr, enc_env, eval_env)
 
 
-def atom[T: (
-    VSA[np.complex128],
-    VSA[np.float64],
-)](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+def atom(rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
     """Test whether the operand is an atomic value or not.
 
     Args:
@@ -398,10 +369,7 @@ def atom[T: (
     return check_atomic(arg, enc_env)
 
 
-def int_[T: (
-    VSA[np.complex128],
-    VSA[np.float64],
-)](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+def int_(rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
     """Test whether the operand is an integer value or not.
 
     Args:
@@ -415,10 +383,7 @@ def int_[T: (
     raise Exception("TODO")
 
 
-def if_[T: (
-    VSA[np.complex128],
-    VSA[np.float64],
-)](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+def if_(rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
     """Conditional evaluation of the branches. Tests the condition as to
     whether or not it is true, and the exectutes the second argument if the
     result is true. Otherwise, executes the third argument.
@@ -456,10 +421,7 @@ def if_[T: (
 
 
 # TODO: add support for quoting
-def quote[T: (
-    VSA[np.complex128],
-    VSA[np.float64],
-)](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+def quote(rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
     """Capture the following code as raw syntax which can be later evaluated.
     Syntax which is quoted can be later interpreted using the function
     `unquote`.
@@ -478,10 +440,9 @@ def quote[T: (
     raise Exception("TODO")
 
 
-def list_add[T: (
-    VSA[np.complex128],
-    VSA[np.float64],
-)](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+def list_add(
+    rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
+) -> T:
     """List addition.
 
     Recall that `.encoding.IntegerEncoding.ListIntegers` encodes integers via
@@ -515,10 +476,9 @@ def list_add[T: (
         return make_cons(enc_env.codebook["nil"], rand_, enc_env)
 
 
-def list_sub[T: (
-    VSA[np.complex128],
-    VSA[np.float64],
-)](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+def list_sub(
+    rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
+) -> T:
     """List subtraction.
 
     ```
@@ -548,10 +508,9 @@ def list_sub[T: (
         return list_sub(args, enc_env, eval_env)
 
 
-def list_mul[T: (
-    VSA[np.complex128],
-    VSA[np.float64],
-)](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+def list_mul(
+    rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
+) -> T:
     """List multiplication.
 
     ```
@@ -581,10 +540,9 @@ def list_mul[T: (
         return list_add(add_args, enc_env, eval_env)
 
 
-def rhc_add[T: (
-    VSA[np.complex128],
-    VSA[np.float64],
-)](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+def rhc_add(
+    rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
+) -> T:
     """Add together two integer elements using Residue Hyperdimensional Computing.
 
     Args:
@@ -607,10 +565,9 @@ def rhc_add[T: (
     return (lhs * rhs) + enc_env.codebook["__int"]  # type: ignore
 
 
-def rhc_sub[T: (
-    VSA[np.complex128],
-    VSA[np.float64],
-)](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+def rhc_sub(
+    rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
+) -> T:
     """Subtract the argument list using RHC.
 
     Args:
@@ -633,24 +590,19 @@ def rhc_sub[T: (
     return (lhs / rhs) + enc_env.codebook["__int"]  # type: ignore
 
 
-def rhc_mul[T: (
-    VSA[np.complex128],
-    VSA[np.float64],
-)](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+def rhc_mul(
+    rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
+) -> T:
     raise Exception("TODO")
 
 
-def rhc_div[T: (
-    VSA[np.complex128],
-    VSA[np.float64],
-)](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+def rhc_div(
+    rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
+) -> T:
     raise Exception("TODO")
 
 
-def add[T: (
-    VSA[np.complex128],
-    VSA[np.float64],
-)](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+def add(rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
     """Addition of operands.
 
     The form of the function depends on `.encoding.IntegerEncodingScheme`. If
@@ -681,10 +633,7 @@ def add[T: (
         )
 
 
-def sub[T: (
-    VSA[np.complex128],
-    VSA[np.float64],
-)](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+def sub(rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
     """Subtraction of operands.
 
     The form of the function depends on `.encoding.IntegerEncodingScheme`. If
@@ -715,10 +664,7 @@ def sub[T: (
         )
 
 
-def mul[T: (
-    VSA[np.complex128],
-    VSA[np.float64],
-)](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+def mul(rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
     """Product of operands.
 
     The form of the function depends on `.encoding.IntegerEncodingScheme`. If
@@ -749,10 +695,7 @@ def mul[T: (
         )
 
 
-def div[T: (
-    VSA[np.complex128],
-    VSA[np.float64],
-)](rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+def div(rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
     """Division of operands.
 
     The form of the function depends on `.encoding.IntegerEncodingScheme`. If
@@ -783,10 +726,7 @@ def div[T: (
         )
 
 
-def make_function_pointer[T: (
-    VSA[np.complex128],
-    VSA[np.float64],
-)](
+def make_function_pointer(
     args: T, body: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
 ) -> T:
     """Allocate a semantic function pointer for the arguments and the body.
@@ -820,10 +760,7 @@ def make_function_pointer[T: (
     return ptr
 
 
-def evaluate_lambda[T: (
-    VSA[np.complex128],
-    VSA[np.float64],
-)](
+def evaluate_lambda(
     function_body: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
 ) -> T:
     """Evaluate a lambda expression, converting it into a semantic function
@@ -846,10 +783,9 @@ def evaluate_lambda[T: (
     return make_function_pointer(args, body, enc_env, eval_env)
 
 
-def evaluate_define[T: (
-    VSA[np.complex128],
-    VSA[np.float64],
-)](define_body: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+def evaluate_define(
+    define_body: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
+) -> T:
     """Evaluate a definition, associates a value to a name in `eval_env`.
 
     Args:
@@ -870,10 +806,35 @@ def evaluate_define[T: (
     return enc_env.codebook["nil"]
 
 
-def evaluate_function_application[T: (
-    VSA[np.complex128],
-    VSA[np.float64],
-)](
+def get_args(
+    expr: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
+) -> T:
+    """Get the arguments from a function pointer."""
+    raise Exception("TODO")
+
+
+def get_body(
+    expr: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
+) -> T:
+    """Get the body of a function pointer."""
+    raise Exception("TODO")
+
+
+def associate(
+    params: T, args: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
+) -> AssociativeMemory[T]:
+    """Associate the parameters and arguments of a function call."""
+    raise Exception("TODO")
+
+
+def update_locals(
+    locals_: AssociativeMemory[T] | None, args: AssociativeMemory[T]
+) -> AssociativeMemory[T]:
+    """Update locals, if it exists."""
+    raise Exception("TODO")
+
+
+def evaluate_function_application(
     operator: T,
     operand: T,
     enc_env: EncodingEnvironment[T],
@@ -892,7 +853,13 @@ def evaluate_function_application[T: (
         The evaluated result of using the arguments as parameters in the function
         body.
     """
-    raise Exception("TODO")
+    args = get_args(operator, enc_env, eval_env)
+    body = get_body(operator, enc_env, eval_env)
+
+    local_mem = associate(args, operand, enc_env, eval_env)
+    locals_ = update_locals(eval_env.locals_, local_mem)
+    local_eval_env = EvalEnvironment(eval_env.define_mem, locals_)
+    return evaluate(body, enc_env, local_eval_env)
 
 
 def evaluate_application[T: (
@@ -1006,10 +973,9 @@ def evaluate_application[T: (
     raise Exception("TODO")
 
 
-def evaluate[T: (
-    VSA[np.complex128],
-    VSA[np.float64],
-)](expr: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+def evaluate(
+    expr: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
+) -> T:
     """Evalute an encoded vector-symbol.
 
     Args:
@@ -1056,10 +1022,7 @@ def evaluate[T: (
     raise Exception("TODO")
 
 
-def closest[T: (
-    VSA[np.complex128],
-    VSA[np.float64],
-)](value: T, enc_env: EncodingEnvironment[T]) -> str:
+def closest(value: T, enc_env: EncodingEnvironment[T]) -> str:
     """Return the closest key for which `value` matches too in the encoding
     environment's codebook.
 
@@ -1080,12 +1043,9 @@ def closest[T: (
     return max_word
 
 
-def decode[T: (
-    VSA[np.complex128],
-    VSA[np.float64],
-)](expr: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> (
-    str | list[Any] | tuple[Any, ...]
-):
+def decode(
+    expr: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
+) -> str | list[Any] | tuple[Any, ...]:
     """Decode a vector symbol to a Python object.
 
     Args:
@@ -1116,10 +1076,7 @@ def decode[T: (
             return (left, right)
 
 
-def interpret[T: (
-    VSA[np.complex128],
-    VSA[np.float64],
-)](
+def interpret(
     src: str, vsa: type[T], dim: int, integer_encoding_scheme: IntegerEncodingScheme
 ) -> None:
     """Interpret a source-level string of the language.

@@ -6,7 +6,7 @@ import sys
 from collections import UserDict
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import cast
+from typing import Generic, TypeVar, cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -14,6 +14,8 @@ from numpy.typing import NDArray
 from syntax import (KEYWORDS, OPERATORS, VALUES, Intr, IntrAtom, IntrList,
                     Token, TokenKind)
 from vsa import FHRR, HRR, RHC, VSA, AnyVSA, VSAdtype
+
+U = TypeVar("U", VSA[np.complex128], VSA[np.float64])
 
 
 class IntegerEncodingScheme(Enum):
@@ -29,7 +31,7 @@ class IntegerEncodingScheme(Enum):
     RHCIntegers = auto()
 
 
-class CleanupMemory[T: (VSA[np.complex128], VSA[np.float64])]:
+class CleanupMemory(Generic[U]):
     """A simple clean-up memory.
 
     Args:
@@ -40,7 +42,7 @@ class CleanupMemory[T: (VSA[np.complex128], VSA[np.float64])]:
             pre-allocate. This is used as the increment.
     """
 
-    vsa: type[T]
+    vsa: type[U]
     """The vector symbolic architecture class that will be used for
     comparison.
     """
@@ -57,7 +59,7 @@ class CleanupMemory[T: (VSA[np.complex128], VSA[np.float64])]:
     size: int
     """The current number of items in memory."""
 
-    def __init__(self, vsa: type[T], dim: int, max_trace: int = 100) -> None:
+    def __init__(self, vsa: type[U], dim: int, max_trace: int = 100) -> None:
         self.vsa = vsa
         self.dim = dim
         self.max_trace = max_trace
@@ -70,7 +72,7 @@ class CleanupMemory[T: (VSA[np.complex128], VSA[np.float64])]:
         elif vsa == FHRR or vsa == RHC:
             self.memory_matrix = np.zeros((max_trace, dim), dtype=np.complex128)
 
-    def memorize(self, x: T, name: str | None = None) -> T:
+    def memorize(self, x: U, name: str | None = None) -> U:
         """Memorize a value into the cleanup memory.
 
         Args:
@@ -95,7 +97,7 @@ class CleanupMemory[T: (VSA[np.complex128], VSA[np.float64])]:
 
         return x
 
-    def recall(self, x: T) -> T:
+    def recall(self, x: U) -> U:
         """Recall a value in the cleanup memory.
 
         Args:
@@ -108,7 +110,7 @@ class CleanupMemory[T: (VSA[np.complex128], VSA[np.float64])]:
         return self.vsa.from_array(self.memory_matrix[np.argmax(activations), :])  # type: ignore
 
 
-class AssociativeMemory[T: (VSA[np.complex128], VSA[np.float64])]:
+class AssociativeMemory(Generic[U]):
     """Associative memory used for semantic pointers.
 
     The associative memmory pulls double duty, both as a store for semantic
@@ -133,18 +135,18 @@ class AssociativeMemory[T: (VSA[np.complex128], VSA[np.float64])]:
     -   dim (int): The dimensionality of the vectors used.
     """
 
-    vsa: type[T]
+    vsa: type[U]
     dim: int
-    assoc: dict[T, T]
+    assoc: dict[U, U]
     _theta: float
 
-    def __init__(self, vsa: type[T], dim: int) -> None:
+    def __init__(self, vsa: type[U], dim: int) -> None:
         self.vsa = vsa
         self.assoc = {}
         self._theta = 0.2
         self.dim = dim
 
-    def alloc(self, trace: T) -> T:
+    def alloc(self, trace: U) -> U:
         """Allocate trace into the associative memory, assigning it a new
         semantic pointer, and returning back that pointer.
         """
@@ -152,11 +154,11 @@ class AssociativeMemory[T: (VSA[np.complex128], VSA[np.float64])]:
         self.assoc[ptr] = trace
         return ptr
 
-    def associate(self, key: T, trace: T) -> None:
+    def associate(self, key: U, trace: U) -> None:
         """Directly associate a key with a trace."""
         self.assoc[key] = trace
 
-    def deref(self, ptr: T) -> T | None:
+    def deref(self, ptr: U) -> U | None:
         """Dereference a semantic pointer, returning none if the dictionary
         is empty.
         """
@@ -177,7 +179,7 @@ class AssociativeMemory[T: (VSA[np.complex128], VSA[np.float64])]:
         return None
 
 
-class Codebook[T: (VSA[np.complex128], VSA[np.float64])](UserDict[str, T]):
+class Codebook(Generic[U], UserDict[str, U]):
     """A Codebook is just a built-in dictionary, which has the additional
     `reverse` method.
 
@@ -185,11 +187,11 @@ class Codebook[T: (VSA[np.complex128], VSA[np.float64])](UserDict[str, T]):
     -   data (dict[str, VSA]): A dictionary mapping strings to vector-symbols.
     """
 
-    def reverse(self) -> dict[T, str]:
+    def reverse(self) -> dict[U, str]:
         return {v: k for (k, v) in self.data.items()}
 
 
-class EncodingEnvironment[T: (VSA[np.complex128], VSA[np.float64])]:
+class EncodingEnvironment(Generic[U]):
     """Class for representing the encoding environment.
 
     The encoding environment contains all of the things necessary for
@@ -217,16 +219,16 @@ class EncodingEnvironment[T: (VSA[np.complex128], VSA[np.float64])]:
         `IntegerEncodingScheme.ListIntegers`.
     """
 
-    vsa: type[T]
+    vsa: type[U]
     dim: int
-    codebook: Codebook[T]
-    cleanup_memory: CleanupMemory[T]
-    associative_memory: AssociativeMemory[T]
+    codebook: Codebook[U]
+    cleanup_memory: CleanupMemory[U]
+    associative_memory: AssociativeMemory[U]
     integer_encoding_scheme: IntegerEncodingScheme
 
     def __init__(
         self,
-        vsa: type[T],
+        vsa: type[U],
         dim: int,
         integer_encoding_scheme: IntegerEncodingScheme = IntegerEncodingScheme.ListIntegers,
     ) -> None:
@@ -244,7 +246,7 @@ class EncodingEnvironment[T: (VSA[np.complex128], VSA[np.float64])]:
 
     # initial codebook with constants
     @staticmethod
-    def initial_codebook(vsa: type[T], dim: int) -> dict[str, T]:
+    def initial_codebook(vsa: type[U], dim: int) -> dict[str, U]:
         codebook = {}
 
         for keyword in KEYWORDS.keys():
@@ -279,10 +281,7 @@ class EncodingError(Exception):
     msg: str
 
 
-def encode_list_integer[T: (
-    VSA[np.complex128],
-    VSA[np.float64],
-)](cont: str, env: EncodingEnvironment[T]) -> T:
+def encode_list_integer(cont: str, env: EncodingEnvironment[U]) -> U:
     """Encode an integer as a list
 
     Args:
@@ -316,10 +315,7 @@ def encode_list_integer[T: (
         return base
 
 
-def encode_rhc_integer[T: (
-    VSA[np.complex128],
-    VSA[np.float64],
-)](cont: str, env: EncodingEnvironment[T]) -> T:
+def encode_rhc_integer(cont: str, env: EncodingEnvironment[U]) -> U:
     """Encode an integer using RHC.
 
     Args:
@@ -338,10 +334,7 @@ def encode_rhc_integer[T: (
         return env.vsa.bundle(RHC.encode(env.dim, conti), env.codebook["__int"])  # type: ignore
 
 
-def encode_atom[T: (
-    VSA[np.complex128],
-    VSA[np.float64],
-)](cont: str, env: EncodingEnvironment[T]) -> T:
+def encode_atom(cont: str, env: EncodingEnvironment[U]) -> U:
     """Encode an atom. If the atom is already present, return that value,
     otherwise create a new value and return that.
 
@@ -363,10 +356,7 @@ def encode_atom[T: (
         return new_symbol
 
 
-def make_cons[T: (
-    VSA[np.complex128],
-    VSA[np.float64],
-)](head: T, tail: T, env: EncodingEnvironment[T]) -> T:
+def make_cons(head: U, tail: U, env: EncodingEnvironment[U]) -> U:
     """Make a semantic pointer to a tuple chunk.
 
     The format of the tuple chunk is similar to that of the function
@@ -412,10 +402,10 @@ def make_cons[T: (
     return ptr
 
 
-def encode_list[T: (
-    VSA[np.complex128],
-    VSA[np.float64],
-)](xs: list[Intr], env: EncodingEnvironment[T],) -> T:
+def encode_list(
+    xs: list[Intr],
+    env: EncodingEnvironment[U],
+) -> U:
     """Encode a list as a vector symbol.
 
     Args:
@@ -443,10 +433,10 @@ def encode_list[T: (
         return make_cons(headv, tailv, env)
 
 
-def encode[T: (
-    VSA[np.complex128],
-    VSA[np.float64],
-)](intr: Intr, env: EncodingEnvironment[T],) -> T:
+def encode(
+    intr: Intr,
+    env: EncodingEnvironment[U],
+) -> U:
     """Encode an intermediate representation into the vector-symbolic
     architecture provided for as an argument to `Env`.
 
