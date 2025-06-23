@@ -5,6 +5,7 @@ specification of the Scheme programming language.
 from __future__ import annotations
 
 import itertools
+import sys
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum, auto
@@ -129,10 +130,11 @@ def _digit(d: str, conts: "more_itertools.peekable[str]") -> Token | None:
 # lex an identifier or keyword
 def _key_or_ident(c: str, conts: "more_itertools.peekable[str]") -> Token | None:
     word = [c]
-    curr = _next(conts)
+    curr = _peek(conts)
     while curr is not None and (curr.isalpha() or curr == "?"):
+        _ = _next(conts)
         word.append(curr)
-        curr = _next(conts)
+        curr = _peek(conts)
     symbol = "".join(word)
     kind = KEYWORDS.get(symbol)
     if kind is None:
@@ -197,137 +199,138 @@ def lex(conts: str) -> Iterator[Token]:
     tokens = []
     current = _token(conts_iter)
     while current is not None:
+        print(f"{current=}", file=sys.stderr)
         tokens.append(current)
         current = _token(conts_iter)
     return iter(tokens)
 
 
-@dataclass
-class Program:
-    """⟨program⟩ −→ ⟨command or definition⟩*"""
+# @dataclass
+# class Program:
+#     """⟨program⟩ −→ ⟨command or definition⟩*"""
 
-    commands: list[Command]
-
-
-type Command = Expression | Definition
-"""
-⟨command or definition⟩ −→ ⟨command⟩
-| ⟨definition⟩
-"""
+#     commands: list[Command]
 
 
-class Expression(ABC):
-    """
-    ⟨expression⟩ −→ ⟨variable⟩
-    | ⟨literal⟩
-    | ⟨procedure call⟩
-    | ⟨lambda expression⟩
-    | ⟨conditional⟩
-    | ⟨let⟩
-    """
-
-    pass
+# type Command = Expression | Definition
+# """
+# ⟨command or definition⟩ −→ ⟨command⟩
+# | ⟨definition⟩
+# """
 
 
-@dataclass
-class ExprVar(Expression):
-    """⟨variable⟩ −→ identifier"""
+# class Expression(ABC):
+#     """
+#     ⟨expression⟩ −→ ⟨variable⟩
+#     | ⟨literal⟩
+#     | ⟨procedure call⟩
+#     | ⟨lambda expression⟩
+#     | ⟨conditional⟩
+#     | ⟨let⟩
+#     """
 
-    var: str
-
-
-@dataclass
-class ExprBool(Expression):
-    """⟨literal⟩ −→ #t | #f"""
-
-    val: bool
-
-
-@dataclass
-class ExprInt(Expression):
-    """⟨literal⟩ −→ int"""
-
-    val: int
+#     pass
 
 
-@dataclass
-class ExprProc(Expression):
-    """
-    ⟨procedure call⟩ −→ (⟨operator⟩ ⟨operand⟩*)
-    """
+# @dataclass
+# class ExprVar(Expression):
+#     """⟨variable⟩ −→ identifier"""
 
-    rator: Expression
-    rands: list[Expression]
+#     var: str
 
 
-@dataclass
-class ExprLambda(Expression):
-    """
-    ⟨lambda expression⟩ −→ (lambda ⟨formals⟩ ⟨body⟩)
-    ⟨formals⟩ −→ (⟨variable⟩*)
-    """
+# @dataclass
+# class ExprBool(Expression):
+#     """⟨literal⟩ −→ #t | #f"""
 
-    args: list[str]
-    body: Expression
+#     val: bool
 
 
-@dataclass
-class ExprIf(Expression):
-    """
-    ⟨conditional⟩ −→ (if ⟨test⟩ ⟨consequent⟩ ⟨alternate⟩)
-    ⟨test⟩ −→ ⟨expression⟩
-    ⟨consequent⟩ −→ ⟨expression⟩
-    ⟨alternate⟩ −→ ⟨expression⟩
-    """
+# @dataclass
+# class ExprInt(Expression):
+#     """⟨literal⟩ −→ int"""
 
-    test: Expression
-    consequent: Expression
-    alternate: Expression
+#     val: int
 
 
-@dataclass
-class ExprLet(Expression):
-    """
-    ⟨let⟩ −→ (let (⟨variable⟩ ⟨value⟩) ⟨body⟩
-    """
+# @dataclass
+# class ExprProc(Expression):
+#     """
+#     ⟨procedure call⟩ −→ (⟨operator⟩ ⟨operand⟩*)
+#     """
 
-    x: str
-    val: Expression
-    body: Expression
-
-
-@dataclass
-class ExprNil(Expression):
-    pass
+#     rator: Expression
+#     rands: list[Expression]
 
 
-@dataclass
-class ExprCons(Expression):
-    pass
+# @dataclass
+# class ExprLambda(Expression):
+#     """
+#     ⟨lambda expression⟩ −→ (lambda ⟨formals⟩ ⟨body⟩)
+#     ⟨formals⟩ −→ (⟨variable⟩*)
+#     """
+
+#     args: list[str]
+#     body: Expression
 
 
-class Definition(ABC):
-    """
-    ⟨definition⟩ −→ (define ⟨variable⟩ ⟨expression⟩)
-    | (define (⟨variable⟩ ⟨def formals⟩) ⟨body⟩)
-    """
+# @dataclass
+# class ExprIf(Expression):
+#     """
+#     ⟨conditional⟩ −→ (if ⟨test⟩ ⟨consequent⟩ ⟨alternate⟩)
+#     ⟨test⟩ −→ ⟨expression⟩
+#     ⟨consequent⟩ −→ ⟨expression⟩
+#     ⟨alternate⟩ −→ ⟨expression⟩
+#     """
 
-    pass
-
-
-class DefFunc(Definition):
-    """(define ⟨variable⟩ ⟨expression⟩)"""
-
-    name: str
-    params: list[str]
-    body: Expression
+#     test: Expression
+#     consequent: Expression
+#     alternate: Expression
 
 
-class DefExpr(Definition):
-    """(define (⟨variable⟩ ⟨def formals⟩) ⟨body⟩)"""
+# @dataclass
+# class ExprLet(Expression):
+#     """
+#     ⟨let⟩ −→ (let (⟨variable⟩ ⟨value⟩) ⟨body⟩
+#     """
 
-    name: str
-    body: Expression
+#     x: str
+#     val: Expression
+#     body: Expression
+
+
+# @dataclass
+# class ExprNil(Expression):
+#     pass
+
+
+# @dataclass
+# class ExprCons(Expression):
+#     pass
+
+
+# class Definition(ABC):
+#     """
+#     ⟨definition⟩ −→ (define ⟨variable⟩ ⟨expression⟩)
+#     | (define (⟨variable⟩ ⟨def formals⟩) ⟨body⟩)
+#     """
+
+#     pass
+
+
+# class DefFunc(Definition):
+#     """(define ⟨variable⟩ ⟨expression⟩)"""
+
+#     name: str
+#     params: list[str]
+#     body: Expression
+
+
+# class DefExpr(Definition):
+#     """(define (⟨variable⟩ ⟨def formals⟩) ⟨body⟩)"""
+
+#     name: str
+#     body: Expression
 
 
 @dataclass
@@ -360,6 +363,7 @@ def _split_on(tokens: "more_itertools.peekable[Token]") -> Intr:
     if curr.kind == TokenKind.Lparen:
         l = []
         while (nxt := _peek(tokens)) is not None and nxt.kind != TokenKind.Rparen:
+            print(f"nxt={nxt}", file=sys.stderr)
             l.append(_split_on(tokens))
         foo = _next(tokens)
         return IntrList(l)
@@ -371,28 +375,28 @@ def _split_on(tokens: "more_itertools.peekable[Token]") -> Intr:
         return IntrAtom(curr)
 
 
-def _atom(token: Token) -> Expression:
-    match token.kind:
-        case TokenKind.Int:
-            return ExprInt(int(token.cont))
+# def _atom(token: Token) -> Expression:
+#     match token.kind:
+#         case TokenKind.Int:
+#             return ExprInt(int(token.cont))
 
-        case TokenKind.Ident:
-            return ExprVar(token.cont)
+#         case TokenKind.Ident:
+#             return ExprVar(token.cont)
 
-        case TokenKind.Truth:
-            return ExprBool(True)
+#         case TokenKind.Truth:
+#             return ExprBool(True)
 
-        case TokenKind.Falsity:
-            return ExprBool(False)
+#         case TokenKind.Falsity:
+#             return ExprBool(False)
 
-        case TokenKind.Nil:
-            return ExprNil()
+#         case TokenKind.Nil:
+#             return ExprNil()
 
-        case TokenKind.Cons:
-            return ExprCons()
+#         case TokenKind.Cons:
+#             return ExprCons()
 
-        case _:
-            raise ParserError("Unexpected token", token)
+#         case _:
+#             raise ParserError("Unexpected token", token)
 
 
 def parse(toks: Iterator[Token]) -> Intr:

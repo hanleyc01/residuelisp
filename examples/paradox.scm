@@ -1,0 +1,1 @@
+((lambda (x) ((lambda (y) (cons x (cons y nil))) N)) M)
