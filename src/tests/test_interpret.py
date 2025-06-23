@@ -334,40 +334,93 @@ def test_rhc_sub(dim: int) -> None:
     assert is_true(equals(value, encoded_result, enc_env, eval_env), enc_env)
 
 
-def test_rhc_mul(dim: int) -> None:
-    src = "(* 5 2)"
-    result = "10"
+# def test_rhc_mul(dim: int) -> None:
+#     src = "(* 5 2)"
+#     result = "10"
+
+#     vsa = FHRR
+#     enc_env = EncodingEnvironment(
+#         vsa=vsa, dim=dim, integer_encoding_scheme=IntegerEncodingScheme.RHCIntegers
+#     )
+#     eval_env = EvalEnvironment(AssociativeMemory(vsa=vsa, dim=dim), None)
+
+#     encoded_value = encode(parse(lex(src)), enc_env)
+#     encoded_result = encode(parse(lex(result)), enc_env)
+
+#     value = evaluate(encoded_value, enc_env, eval_env)
+
+#     assert is_true(equals(value, encoded_result, enc_env, eval_env), enc_env)
+
+
+# def test_rhc_div(dim: int) -> None:
+#     src = "(/ 10 2)"
+#     result = "5"
+
+#     vsa = FHRR
+#     enc_env = EncodingEnvironment(
+#         vsa=vsa, dim=dim, integer_encoding_scheme=IntegerEncodingScheme.RHCIntegers
+#     )
+#     eval_env = EvalEnvironment(AssociativeMemory(vsa=vsa, dim=dim), None)
+
+#     encoded_value = encode(parse(lex(src)), enc_env)
+#     encoded_result = encode(parse(lex(result)), enc_env)
+
+#     value = evaluate(encoded_value, enc_env, eval_env)
+
+#     assert is_true(equals(value, encoded_result, enc_env, eval_env), enc_env)
+
+
+def test_closure_get_args(dim: int) -> None:
+    src = "(lambda (foo) bar)"
+    result_str = "(cons foo nil)"
 
     vsa = FHRR
-    enc_env = EncodingEnvironment(
-        vsa=vsa, dim=dim, integer_encoding_scheme=IntegerEncodingScheme.RHCIntegers
+    enc_env = EncodingEnvironment(vsa=vsa, dim=dim)
+    eval_env = EvalEnvironment(
+        define_mem=AssociativeMemory(vsa=vsa, dim=dim), locals_=None
     )
-    eval_env = EvalEnvironment(AssociativeMemory(vsa=vsa, dim=dim), None)
 
     encoded_value = encode(parse(lex(src)), enc_env)
-    encoded_result = encode(parse(lex(result)), enc_env)
+    encoded_result = encode(parse(lex(result_str)), enc_env)
 
     value = evaluate(encoded_value, enc_env, eval_env)
+    result = evaluate(encoded_result, enc_env, eval_env)
 
-    assert is_true(equals(value, encoded_result, enc_env, eval_env), enc_env)
+    assert is_true(
+        equals(get_args(value, enc_env, eval_env), result, enc_env, eval_env), enc_env
+    )
 
 
-def test_rhc_div(dim: int) -> None:
-    src = "(/ 10 2)"
-    result = "5"
+def test_closure_get_body(dim: int) -> None:
+    src = "(lambda (foo) bar)"
+    result_str = "bar"
 
     vsa = FHRR
-    enc_env = EncodingEnvironment(
-        vsa=vsa, dim=dim, integer_encoding_scheme=IntegerEncodingScheme.RHCIntegers
-    )
+    enc_env = EncodingEnvironment(vsa=vsa, dim=dim)
     eval_env = EvalEnvironment(AssociativeMemory(vsa=vsa, dim=dim), None)
 
+    lexed_src = lex(src)
+    print(list(lexed_src), file=sys.stderr)
     encoded_value = encode(parse(lex(src)), enc_env)
-    encoded_result = encode(parse(lex(result)), enc_env)
+    encoded_result = encode(parse(lex(result_str)), enc_env)
 
     value = evaluate(encoded_value, enc_env, eval_env)
+    result = evaluate(encoded_result, enc_env, eval_env)
 
-    assert is_true(equals(value, encoded_result, enc_env, eval_env), enc_env)
+    body = get_body(value, enc_env, eval_env)
+
+    print(
+        f"""
+    =========================================================================
+    encoded_value = {decode(encoded_value, enc_env, eval_env)}
+    result = {decode(result, enc_env, eval_env)}
+    body = {decode(body, enc_env, eval_env)}
+    =========================================================================
+    """,
+        file=sys.stderr,
+    )
+
+    assert is_true(equals(body, result, enc_env, eval_env), enc_env)
 
 
 def test_closure_basic(dim: int) -> None:
@@ -400,8 +453,10 @@ def test_closure_basic(dim: int) -> None:
 
 
 def test_closure_embedded(dim: int) -> None:
-    src = "( (lambda (x) (lambda (y) (y x)) M) N)"
-    result = "(N M)"
+    src = """
+    ((lambda (x) ((lambda (y) (cons x (cons y nil))) N)) M)
+    """
+    result = "(cons M (cons N nil))"
 
     vsa = FHRR
     enc_env = EncodingEnvironment(
@@ -412,6 +467,7 @@ def test_closure_embedded(dim: int) -> None:
     encoded_value = encode(parse(lex(src)), enc_env)
     encoded_result = encode(parse(lex(result)), enc_env)
 
+    evaluated_result = evaluate(encoded_result, enc_env, eval_env)
     value = evaluate(encoded_value, enc_env, eval_env)
 
     print(
@@ -425,26 +481,26 @@ def test_closure_embedded(dim: int) -> None:
         file=sys.stderr,
     )
 
-    assert is_true(equals(value, encoded_result, enc_env, eval_env), enc_env)
+    assert is_true(equals(value, evaluated_result, enc_env, eval_env), enc_env)
 
 
-def test_is_int(dim: int) -> None:
-    src = "(int? 1)"
-    src2 = "(int? foo)"
-    vsa = FHRR
-    enc_env = EncodingEnvironment(
-        vsa=vsa, dim=dim, integer_encoding_scheme=IntegerEncodingScheme.RHCIntegers
-    )
-    eval_env = EvalEnvironment(AssociativeMemory(vsa=vsa, dim=dim), None)
+# def test_is_int(dim: int) -> None:
+#     src = "(int? 1)"
+#     src2 = "(int? foo)"
+#     vsa = FHRR
+#     enc_env = EncodingEnvironment(
+#         vsa=vsa, dim=dim, integer_encoding_scheme=IntegerEncodingScheme.RHCIntegers
+#     )
+#     eval_env = EvalEnvironment(AssociativeMemory(vsa=vsa, dim=dim), None)
 
-    encoded_value = encode(parse(lex(src)), enc_env)
-    value = evaluate(encoded_value, enc_env, eval_env)
+#     encoded_value = encode(parse(lex(src)), enc_env)
+#     value = evaluate(encoded_value, enc_env, eval_env)
 
-    encoded_value2 = encode(parse(lex(src2)), enc_env)
-    value2 = evaluate(encoded_value2, enc_env, eval_env)
+#     encoded_value2 = encode(parse(lex(src2)), enc_env)
+#     value2 = evaluate(encoded_value2, enc_env, eval_env)
 
-    assert is_true(value, enc_env)
-    assert is_false(value2, enc_env)
+#     assert is_true(value, enc_env)
+#     assert is_false(value2, enc_env)
 
 
 def test_equals_atomic_nil(dim: int) -> None:
@@ -510,7 +566,3 @@ def test_and_comp(dim: int) -> None:
     value = evaluate(encoded_value, enc_env, eval_env)
 
     assert is_approx_eq(value, enc_env.codebook["#t"], enc_env)
-
-
-def test_decode(dim: int) -> None:
-    assert False

@@ -622,6 +622,9 @@ def add(rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) 
 
     Returns:
         The sum of the two numbers, using the encoding scheme provided.
+
+    Raises:
+        `InterpreterError` when the integer format is not recognized.
     """
     if enc_env.integer_encoding_scheme == IntegerEncodingScheme.ListIntegers:
         return list_add(rand, enc_env, eval_env)
@@ -653,6 +656,9 @@ def sub(rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) 
 
     Returns:
         The difference of the two numbers, using the encoding scheme provided.
+
+    Raises:
+        `InterpreterError` when the integer format is not recognized.
     """
     if enc_env.integer_encoding_scheme == IntegerEncodingScheme.ListIntegers:
         return list_sub(rand, enc_env, eval_env)
@@ -684,6 +690,9 @@ def mul(rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) 
 
     Returns:
         The product of the two numbers, using the encoding scheme provided.
+
+    Raises:
+        `InterpreterError` when the integer format is not recognized.
     """
     if enc_env.integer_encoding_scheme == IntegerEncodingScheme.ListIntegers:
         return list_mul(rand, enc_env, eval_env)
@@ -715,6 +724,10 @@ def div(rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) 
 
     Returns:
         The fraction of the two numbers, using the encoding scheme provided.
+
+    Raises:
+        `InterpreterError` when the integer format is not recognized.
+        `NotImplementedError` when you use `.encoding.IntegerEncodingScheme.ListIntegers`.
     """
     if enc_env.integer_encoding_scheme == IntegerEncodingScheme.ListIntegers:
         raise NotImplementedError("Division is not implemented for List integers!")
@@ -777,9 +790,25 @@ def evaluate_lambda(
         points to a function chunk.
     """
     print("evaluate_lambda call", file=sys.stderr)
+    print(
+        "=========================================================================",
+        file=sys.stderr,
+    )
     args = car(function_body, enc_env, eval_env)
     cdr_ = cdr(function_body, enc_env, eval_env)
-    body = car(function_body, enc_env, eval_env)
+    body = car(cdr_, enc_env, eval_env)
+    print(
+        f"""
+    function_body = {decode(function_body, enc_env, eval_env)}
+    args = {decode(args, enc_env, eval_env)}
+    body = {decode(body, enc_env, eval_env)}
+    """,
+        file=sys.stderr,
+    )
+    print(
+        "=========================================================================",
+        file=sys.stderr,
+    )
     return make_function_pointer(args, body, enc_env, eval_env)
 
 
@@ -809,29 +838,111 @@ def evaluate_define(
 def get_args(
     expr: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
 ) -> T:
-    """Get the arguments from a function pointer."""
-    raise Exception("TODO")
+    """Get the arguments from a function pointer.
+
+    Args:
+    -   expr (VSA): A function pointer vector symbol.
+    -   enc_env (EncodingEnvironment): The encoding environment.
+    -   eval_env (EvalEnvironment): The evaluation environment.
+
+    Returns:
+        The arguments of the function pointer.
+
+    Raises:
+        `InterpreterError`, when the value provided is not a function pointer.
+    """
+    if is_false(check_function(expr, enc_env), enc_env):
+        raise InterpreterError("ERROR: Expected function in `get_args`.")
+
+    closure = enc_env.associative_memory.deref(expr)
+    if closure is None:
+        raise InterpreterError("ERROR: segmentation fault in `get_args`.")
+
+    args = enc_env.vsa.unbind(closure.data, enc_env.codebook["__args"].data)
+    return enc_env.vsa.from_array(args)
 
 
 def get_body(
     expr: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
 ) -> T:
-    """Get the body of a function pointer."""
-    raise Exception("TODO")
+    """Get the body of a function pointer.
+
+    Args:
+    -   expr (VSA): A function pointer vector symbol.
+    -   enc_env (EncodingEnvironment): The encoding environment.
+    -   eval_env (EvalEnvironment): The evaluation environment.
+
+    Returns:
+        The body of the function pointer.
+
+    Raises:
+        `InterpreterError`, when the value provided is not a function pointer.
+
+    """
+    if is_false(check_function(expr, enc_env), enc_env):
+        raise InterpreterError("ERROR: Expected function in `get_body`.")
+
+    closure = enc_env.associative_memory.deref(expr)
+    if closure is None:
+        raise InterpreterError("ERROR: segmentation fault in `get_body`.")
+
+    args = enc_env.vsa.unbind(closure.data, enc_env.codebook["__body"].data)
+    return enc_env.vsa.from_array(args)
+
+
+def tuple_to_list(
+    listexpr: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
+) -> list[T]:
+    """Convert a tuple into a list."""
+    if is_true(check_atomic(listexpr, enc_env), enc_env):
+        raise InterpreterError("ERROR: Tuple is not a list.")
+
+    curr = listexpr
+    xs: list[T] = []
+
+    while True:
+        try:
+            car_ = car(curr, enc_env, eval_env)
+            xs.append(car_)
+            curr = cdr(curr, enc_env, eval_env)
+        except:
+            break
+
+    return xs
 
 
 def associate(
     params: T, args: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
 ) -> AssociativeMemory[T]:
     """Associate the parameters and arguments of a function call."""
-    raise Exception("TODO")
+    print("`associate` call", file=sys.stderr)
+    parameter_list = tuple_to_list(params, enc_env, eval_env)
+    print("\tcompleted converting parameters to list", file=sys.stderr)
+    unev_argument_list = tuple_to_list(args, enc_env, eval_env)
+    print("\tcompleted converting arguments to list", file=sys.stderr)
+    argument_list = [evaluate(arg, enc_env, eval_env) for arg in unev_argument_list]
+
+    if len(parameter_list) != len(argument_list):
+        raise InterpreterError("ERROR: argument number mismatch in `associate`.")
+
+    local_assoc = AssociativeMemory(vsa=enc_env.vsa, dim=enc_env.dim)
+    for param, arg in zip(parameter_list, argument_list):
+        local_assoc.associate(param, arg)
+
+    return local_assoc
 
 
 def update_locals(
     locals_: AssociativeMemory[T] | None, args: AssociativeMemory[T]
 ) -> AssociativeMemory[T]:
     """Update locals, if it exists."""
-    raise Exception("TODO")
+    if locals_ is None:
+        return args
+
+    else:
+        new_mem = deepcopy(locals_)
+        new_mem.assoc.update(args.assoc)
+        return new_mem
 
 
 def evaluate_function_application(
@@ -853,7 +964,17 @@ def evaluate_function_application(
         The evaluated result of using the arguments as parameters in the function
         body.
     """
+    print(
+        "###################################################################",
+        file=sys.stderr,
+    )
+    print("evaluate_function_application call", file=sys.stderr)
     args = get_args(operator, enc_env, eval_env)
+    print(f"\targs={decode(args, enc_env, eval_env)}", file=sys.stderr)
+    print(
+        "###################################################################",
+        file=sys.stderr,
+    )
     body = get_body(operator, enc_env, eval_env)
 
     local_mem = associate(args, operand, enc_env, eval_env)
@@ -890,12 +1011,43 @@ def evaluate_application[T: (
     if (eval_env.locals_ is not None) and (
         mayb_local_val := eval_env.locals_.deref(rator)
     ) is not None:
+        print(
+            "##############################################################",
+            file=sys.stderr,
+        )
+        print("\nvalue found in locals\n", file=sys.stderr)
+        print(
+            "##############################################################",
+            file=sys.stderr,
+        )
         operator_v = mayb_local_val
     elif (mayb_define_val := eval_env.define_mem.deref(rator)) is not None:
+        print(
+            "##############################################################",
+            file=sys.stderr,
+        )
+        print("\nvalue found in define_mem\n", file=sys.stderr)
+        print(
+            "##############################################################",
+            file=sys.stderr,
+        )
         operator_v = mayb_define_val
     else:
+        print(
+            "##############################################################",
+            file=sys.stderr,
+        )
+        print("\nvalue not in locals or define mem\n", file=sys.stderr)
+        print(
+            "##############################################################",
+            file=sys.stderr,
+        )
         operator_v = rator
     operator_v = enc_env.cleanup_memory.recall(operator_v)
+    operator_v = evaluate(operator_v, enc_env, eval_env)
+    print(
+        f"EVALUTE APPLICATION: {decode(operator_v, enc_env, eval_env)}", file=sys.stderr
+    )
 
     # if RHC encoding, test if it is an integer
     if enc_env.integer_encoding_scheme == IntegerEncodingScheme.RHCIntegers:
@@ -967,6 +1119,7 @@ def evaluate_application[T: (
         print("is a function!", file=sys.stderr)
         return evaluate_function_application(operator_v, rand, enc_env, eval_env)
     else:
+        print("not recognized!", file=sys.stderr)
         eval_rand = evaluate(rand, enc_env, eval_env)
         return make_cons(operator_v, eval_rand, enc_env)
 
@@ -989,24 +1142,19 @@ def evaluate(
     Raises:
         `InterpreterError`.
     """
-    print("evaluate call", file=sys.stderr)
-    if is_approx_eq(check_atomic(expr, enc_env), enc_env.codebook["#t"], enc_env):
+    print(f"##evaluate call of {decode(expr, enc_env, eval_env)}", file=sys.stderr)
+    if is_true(check_atomic(expr, enc_env), enc_env):
         print("\texpression is an atom", file=sys.stderr)
 
-        # TODO: fix this to check first locals if available, then
-        # fall through to define
-        if eval_env.locals_ is None:
-            res = eval_env.define_mem.deref(expr)
-            if res is None:
-                print("value not found in `define_mem`", file=sys.stderr)
-                return expr
-            return res
+        if (
+            eval_env.locals_ is not None
+            and (maybe_local_val := eval_env.locals_.deref(expr)) is not None
+        ):
+            return maybe_local_val
+        elif (maybe_define_val := eval_env.define_mem.deref(expr)) is not None:
+            return maybe_define_val
         else:
-            res = eval_env.locals_.deref(expr)
-            if res is None:
-                print("value not found in `locals_`", file=sys.stderr)
-                return expr
-            return res
+            return expr
 
     print("\texpression is non-atomic", file=sys.stderr)
     head = car(expr, enc_env, eval_env)
@@ -1018,8 +1166,6 @@ def evaluate(
         return evaluate_define(tail, enc_env, eval_env)
     else:
         return evaluate_application(head, tail, enc_env, eval_env)
-
-    raise Exception("TODO")
 
 
 def closest(value: T, enc_env: EncodingEnvironment[T]) -> str:

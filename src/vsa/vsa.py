@@ -4,12 +4,14 @@ Module defining the abstract base class of `VSA`s.
 """
 
 from abc import ABCMeta, abstractmethod, abstractproperty
-from typing import Any
+from typing import Any, Generic, TypeVar
 
 import numpy.typing as npt
 
+T = TypeVar("T", bound=Any)
 
-class VSA[T: Any](metaclass=ABCMeta):
+
+class VSA(Generic[T], metaclass=ABCMeta):
     """Abstract base class of all VSA implementations.
 
     We define this class in order
