@@ -138,7 +138,11 @@ class HRR(vsa.VSA[np.float64]):
             The 'distance' between the left-hand side and the right-hand
             side, a value between -1 and 1.
         """
-        return float((x @ y) / np.linalg.norm(x.data))
+        inner = np.dot(x, np.conj(y))
+        mag = 0.0
+        if (nrm := np.linalg.norm(x) * np.linalg.norm(y)) != 0.0:
+            mag = float(nrm)
+        return float(np.real(inner) / np.linalg.norm(x) * np.linalg.norm(y))
 
     def __add__(self, rhs: HRR | float | int) -> HRR:
         """See `HRR.bundle`."""
