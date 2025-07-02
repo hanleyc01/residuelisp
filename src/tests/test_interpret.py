@@ -1,10 +1,11 @@
 import sys
+from typing import cast
 
 import pytest
 
 from language import *
 from syntax import lex, parse
-from vsa import FHRR, HRR
+from vsa import FHRR, HRR, RHC
 
 
 @pytest.fixture
@@ -484,23 +485,23 @@ def test_closure_embedded(dim: int) -> None:
     assert is_true(equals(value, evaluated_result, enc_env, eval_env), enc_env)
 
 
-# def test_is_int(dim: int) -> None:
-#     src = "(int? 1)"
-#     src2 = "(int? foo)"
-#     vsa = FHRR
-#     enc_env = EncodingEnvironment(
-#         vsa=vsa, dim=dim, integer_encoding_scheme=IntegerEncodingScheme.RHCIntegers
-#     )
-#     eval_env = EvalEnvironment(AssociativeMemory(vsa=vsa, dim=dim), None)
+def test_is_int(dim: int) -> None:
+    src = "(int? 1)"
+    src2 = "(int? foo)"
+    vsa = FHRR
+    enc_env = EncodingEnvironment(
+        vsa=vsa, dim=dim, integer_encoding_scheme=IntegerEncodingScheme.RHCIntegers
+    )
+    eval_env = EvalEnvironment(AssociativeMemory(vsa=vsa, dim=dim), None)
 
-#     encoded_value = encode(parse(lex(src)), enc_env)
-#     value = evaluate(encoded_value, enc_env, eval_env)
+    encoded_value = encode(parse(lex(src)), enc_env)
+    value = evaluate(encoded_value, enc_env, eval_env)
 
-#     encoded_value2 = encode(parse(lex(src2)), enc_env)
-#     value2 = evaluate(encoded_value2, enc_env, eval_env)
+    encoded_value2 = encode(parse(lex(src2)), enc_env)
+    value2 = evaluate(encoded_value2, enc_env, eval_env)
 
-#     assert is_true(value, enc_env)
-#     assert is_false(value2, enc_env)
+    assert is_true(value, enc_env)
+    assert is_false(value2, enc_env)
 
 
 def test_equals_atomic_nil(dim: int) -> None:
@@ -566,3 +567,19 @@ def test_and_comp(dim: int) -> None:
     value = evaluate(encoded_value, enc_env, eval_env)
 
     assert is_approx_eq(value, enc_env.codebook["#t"], enc_env)
+
+
+def test_decode_int(dim: int) -> None:
+    vsa = FHRR
+    src = "1"
+
+    enc_env = EncodingEnvironment(
+        vsa=vsa, dim=dim, integer_encoding_scheme=IntegerEncodingScheme.RHCIntegers
+    )
+    eval_env = EvalEnvironment(AssociativeMemory(vsa=vsa, dim=dim), None)
+
+    encoded_value = encode(parse(lex(src)), enc_env)
+
+    decoded_value = decode_rhc(cast(RHC, encoded_value), enc_env)
+
+    assert decoded_value == src

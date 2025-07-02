@@ -21,7 +21,7 @@ def iterated_rhc_bind(iterations: int = 100, dim: int = 100) -> list[tuple[float
     iters = []
 
     left = RHC.encode(dim, 10)
-    right = RHC.encode(dim, 7, moduli=left.moduli, roots=left.roots, phis=left.phis)
+    right = RHC.encode(dim, 7)
 
     prod = left * right
     for i in range(iterations):
@@ -74,7 +74,8 @@ def perf() -> None:
     times = [time * 1000 for time, _ in iter_cons]
     iterations = [iteration for _, iteration in iter_cons]
     plt.plot(iterations, times, color="BLACK", label="List Integers")
-    plt.xlabel("Number of additions")
+    plt.xlabel("Value $n$ in operation $1 + n$")
     plt.ylabel("Time (msec)")
+    plt.title("Time to compute $1 + n$")
     plt.legend()
     plt.show()

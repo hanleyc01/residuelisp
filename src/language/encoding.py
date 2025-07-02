@@ -13,7 +13,7 @@ from numpy.typing import NDArray
 
 from syntax import (KEYWORDS, OPERATORS, VALUES, Intr, IntrAtom, IntrList,
                     Token, TokenKind)
-from vsa import FHRR, HRR, RHC, VSA, AnyVSA, VSAdtype
+from vsa import FHRR, HRR, RHC, VSA, AnyVSA, ArrayC128, VSAdtype
 
 U = TypeVar("U", VSA[np.complex128], VSA[np.float64])
 
@@ -226,6 +226,10 @@ class EncodingEnvironment(Generic[U]):
     associative_memory: AssociativeMemory[U]
     integer_encoding_scheme: IntegerEncodingScheme
 
+    roots: list[ArrayC128] = []
+    phis: list[ArrayC128] = []
+    moduli: list[int] = []
+
     def __init__(
         self,
         vsa: type[U],
@@ -331,7 +335,16 @@ def encode_rhc_integer(cont: str, env: EncodingEnvironment[U]) -> U:
         raise EncodingError(f"{conti} is expected to be a positive number, sorry!")
 
     else:
-        return env.vsa.bundle(RHC.encode(env.dim, conti), env.codebook["__int"])  # type: ignore
+        if len(env.roots) == 0 or len(env.phis) == 0 or len(env.moduli) == 0:
+            code = RHC.encode(env.dim, conti, moduli=env.moduli)
+            return env.vsa.bundle(code, env.codebook["__int"])  # type: ignore
+        else:
+            code = RHC.encode(
+                env.dim,
+                conti,
+                moduli=env.moduli,
+            )
+            return env.vsa.bundle(code, env.codebook["__int"])  # type: ignore
 
 
 def encode_atom(cont: str, env: EncodingEnvironment[U]) -> U:

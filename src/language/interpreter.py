@@ -10,7 +10,7 @@ from typing import Any, Generic, TypeVar, cast
 import numpy as np
 
 from syntax import KEYWORDS, OPERATORS, lex, parse
-from vsa import RHC, VSA
+from vsa import DEFAULT_MODULI, RHC, VSA, ArrayC128
 
 from .encoding import (AssociativeMemory, EncodingEnvironment,
                        IntegerEncodingScheme, encode, make_cons)
@@ -166,6 +166,41 @@ def check_function(
     )
 
     bundled_result = enc_env.vsa.bundle(close_to___func, far_from___func)
+    cleanuped = enc_env.cleanup_memory.recall(enc_env.vsa.from_array(bundled_result))
+    return cleanuped
+
+
+def check_int(
+    expr: T,
+    enc_env: EncodingEnvironment[T],
+    floor: float = 0.2,
+) -> T:
+    """Determine whether or not a value is an integer using the RHC integer
+    encoding scheme.
+
+    Args:
+    -   expr (VSA): A vector-symbol representing an integer.
+    -   enc_env (EncodingEnvironment): The encoding environment.
+    -   floor (float): Comparison floor, defaults to `0.2`.
+
+    Returns:
+        The vector symbol for `#t` if the value contains the special
+        symbol associated with RHC integers.
+    """
+    close_to_int = (
+        enc_env.vsa.similarity(expr.data, enc_env.codebook["__int"].data)
+        * enc_env.codebook["#t"].data
+    )
+    far_from_int = (
+        max(
+            (2 * floor)
+            - enc_env.vsa.similarity(expr.data, enc_env.codebook["__int"].data),
+            0.0,
+        )
+        * enc_env.codebook["#f"].data
+    )
+
+    bundled_result = enc_env.vsa.bundle(close_to_int, far_from_int)
     cleanuped = enc_env.cleanup_memory.recall(enc_env.vsa.from_array(bundled_result))
     return cleanuped
 
@@ -380,7 +415,13 @@ def int_(rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T])
     Returns:
         True if the value is indeed atomic, false otherwise.
     """
-    raise Exception("TODO")
+    if enc_env.integer_encoding_scheme == IntegerEncodingScheme.ListIntegers:
+        raise InterpreterError(
+            "ERROR: Unable to test whether or not a value is an integer using the list encoding as integers as encoded as lists"
+        )
+    else:
+        value = car(rand, enc_env, eval_env)
+        return check_int(value, enc_env)
 
 
 def if_(rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
@@ -440,6 +481,7 @@ def quote(rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
     raise Exception("TODO")
 
 
+# switch this to different
 def list_add(
     rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
 ) -> T:
@@ -528,6 +570,7 @@ def list_mul(
 
     if is_nil(rhs, enc_env):
         return enc_env.codebook["nil"]
+    # fix, add identity product
     else:
         y = cdr(rhs, enc_env, eval_env)
         mul_args = make_cons(
@@ -593,6 +636,16 @@ def rhc_sub(
 def rhc_mul(
     rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
 ) -> T:
+    """Residue Hyperdimensional Computing multiplication.
+
+    Args:
+    -   rand (VSA): A vector-symbol list representing integer arguments.
+    -   enc_env (EncodingEnvironment): The encoding environment.
+    -   eval_env (EvalEnvironment): The evaluation environment.
+
+    Returns:
+        `RHC.encode(x) * RHC.encode(y) = RHC.encode(x * y)`
+    """
     raise Exception("TODO")
 
 
@@ -1189,6 +1242,35 @@ def closest(value: T, enc_env: EncodingEnvironment[T]) -> str:
     return max_word
 
 
+_RHC_CACHE = []
+
+
+def _initialize_rhc_cache(enc_env: EncodingEnvironment[T], max_: int) -> None:
+    for i in range(max_):
+        _RHC_CACHE.append(RHC.encode(enc_env.dim, i, enc_env.moduli).data)
+
+
+def decode_rhc(value: RHC, enc_env: EncodingEnvironment[T], floor: float = 0.2) -> str:
+    """Decode an RHC encoded integer into a human-readable string format.
+
+    Args:
+    -   value (VSA): A vector-symbol representing an integer.
+    -   enc_env (EncodingEnvironment): The encoding environment.
+
+    Returns:
+        A human readable integer as a string.
+    """
+    codebook = deepcopy(RHC.codebook)
+
+    for i in range(200):
+        if i not in codebook:
+            codebook[i] = RHC.encode(enc_env.dim, i).data
+    keys, codes = zip(*codebook.items())
+    sims = [RHC.similarity(value.data, code) for code in codes]
+    max_sim = np.argmax(sims)
+    return str(keys[max_sim])
+
+
 def decode(
     expr: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
 ) -> str | list[Any] | tuple[Any, ...]:
@@ -1207,6 +1289,11 @@ def decode(
         `InterpreterError`.
     """
     if is_approx_eq(check_atomic(expr, enc_env), enc_env.codebook["#t"], enc_env):
+        if (
+            enc_env.integer_encoding_scheme == IntegerEncodingScheme.RHCIntegers
+        ) and is_true(check_int(expr, enc_env), enc_env):
+            return decode_rhc(expr, enc_env)
+
         return closest(expr, enc_env)
     else:
         car_ = car(expr, enc_env, eval_env)
