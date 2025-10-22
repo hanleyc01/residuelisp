@@ -1,0 +1,14 @@
+[
+  "src/tests/test_memory.py::test_associative_memory_init",
+  "src/tests/test_memory.py::test_cleanup_memory",
+  "src/tests/test_memory.py::test_cleanup_memory_init",
+  "src/tests/test_memory.py::test_cleanup_memory_recall",
+  "src/tests/test_memory.py::test_cleanup_memory_recall_memorize",
+  "src/tests/test_vsa.py::test_binding",
+  "src/tests/test_vsa.py::test_bundling",
+  "src/tests/test_vsa.py::test_fhrr_random",
+  "src/tests/test_vsa.py::test_fhrr_random_cosine_similarity",
+  "src/tests/test_vsa.py::test_fhrr_random_identity",
+  "src/tests/test_vsa.py::test_inverse",
+  "src/tests/test_vsa.py::test_unbinding"
+]

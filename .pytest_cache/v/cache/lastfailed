@@ -1,0 +1,4 @@
+{
+  "src/tests/test_memory.py::test_cleanup_memory": true,
+  "src/tests/test_vsa.py::test_fhrr_random_identity": true
+}
