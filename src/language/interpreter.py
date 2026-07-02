@@ -605,7 +605,7 @@ def rhc_add(
 
     unwrapped_lhs = cast(T, lhs - enc_env.codebook["__int"])  # type: ignore
     unwrapped_rhs = cast(T, rhs - enc_env.codebook["__int"])  # type: ignore
-    return (lhs * rhs) + enc_env.codebook["__int"]  # type: ignore
+    return (unwrapped_lhs * unwrapped_rhs) + enc_env.codebook["__int"]  # type: ignore
 
 
 def rhc_sub(
@@ -630,7 +630,7 @@ def rhc_sub(
 
     unwrapped_lhs = cast(T, lhs - enc_env.codebook["__int"])  # type: ignore
     unwrapped_rhs = cast(T, rhs - enc_env.codebook["__int"])  # type: ignore
-    return (lhs / rhs) + enc_env.codebook["__int"]  # type: ignore
+    return (unwrapped_lhs / unwrapped_rhs) + enc_env.codebook["__int"]  # type: ignore
 
 
 def rhc_mul(
@@ -1292,6 +1292,7 @@ def decode(
         if (
             enc_env.integer_encoding_scheme == IntegerEncodingScheme.RHCIntegers
         ) and is_true(check_int(expr, enc_env), enc_env):
+            print("decoding rhc")
             return decode_rhc(expr, enc_env)
 
         return closest(expr, enc_env)

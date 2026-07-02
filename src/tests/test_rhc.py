@@ -66,18 +66,18 @@ def test_rhc_hash() -> None:
     assert reverse["test"] == value
 
 
-def test_rhc_resonate() -> None:
-    dim = 1000
-    value = RHC.encode(dim=dim, x=10)
+# def test_rhc_resonate() -> None:
+#     dim = 1000
+#     value = RHC.encode(dim=dim, x=10)
 
-    dec, codebooks = resonator_decoding(value)
-    last_guess = dec[-1]
-    finest = []
-    for mod, est in last_guess.items():
-        sims = []
-        book = codebooks[mod]
-        for i in range(mod):
-            sims.append(RHC.similarity(est, book[:, i]))
-        finest.append(np.argmax(sims))
-    print(finest, file=sys.stderr)
-    assert False
+#     dec, codebooks = resonator_decoding(value)
+#     last_guess = dec[-1]
+#     finest = []
+#     for mod, est in last_guess.items():
+#         sims = []
+#         book = codebooks[mod]
+#         for i in range(mod):
+#             sims.append(RHC.similarity(est, book[:, i]))
+#         finest.append(np.argmax(sims))
+#     print(finest, file=sys.stderr)
+#     assert False

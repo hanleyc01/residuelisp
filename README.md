@@ -18,12 +18,21 @@ If you want to interpret a file, run
 ```bash
 $ uv run ./src/main.py -i <filename>
 ```
-[WARNING: CURRENTLY NOT SUPPPORTED]
+
+You can also directly interpret code using the same command
+```bash
+% uv run ./src/main.py -i "<code>"
+```
 
 In order to hack on this or contribute, make sure that you format the code
 using `black` with the command `./.venv/bin/black ./src/*`. Similarly, make sure it passes
 `mypy --strict`. To help with this, before submitting any changes,
 run `./pre_commit.sh` which should format and type check the code.
+
+Testing can also be accomplished with
+```
+uv run pytest
+```
 
 # Documentation
 

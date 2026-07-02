@@ -65,14 +65,16 @@ class RHC(VSA[np.complex128]):
             RHC.moduli = moduli
             RHC.z_ms = [fpe_mod_m(dim, 1, mod) for mod in RHC.moduli]
 
-        if not all(z_m.size == dim for z_m in RHC.z_ms):
+        if len(RHC.z_ms) != len(RHC.moduli) or not all(
+            z_m.size == dim for z_m in RHC.z_ms
+        ):
             RHC.z_ms = [fpe_mod_m(dim, 1, mod) for mod in RHC.moduli]
 
         data: npt.NDArray[np.complex128] = np.ones(shape=(dim,), dtype=np.complex128)
         for z_m in RHC.z_ms:
-            data = data * z_m
-        RHC.codebook[x] = data**x
-        return RHC(data**x)
+            data = data * (z_m ** x)
+        RHC.codebook[x] = data
+        return RHC(data)
 
     @staticmethod
     def bind(

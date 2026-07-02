@@ -34,7 +34,7 @@ def main() -> None:
 
         dim = 1000
         vsa = FHRR
-        print(interpret(src, vsa, dim, IntegerEncodingScheme.ListIntegers))
+        print(interpret(src, vsa, dim, IntegerEncodingScheme.RHCIntegers))
 
 
 # from language import (EncodingEnvironment, IntegerEncodingScheme, encode,

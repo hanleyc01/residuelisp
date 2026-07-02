@@ -326,6 +326,7 @@ def encode_rhc_integer(cont: str, env: EncodingEnvironment[U]) -> U:
     -   cont (str): A string that is an integer.
     -   env (EncodingEnvironment): The encoding environment.
     """
+    print("encoding rhc integer", cont)
     try:
         conti = int(cont)
     except:
@@ -336,7 +337,7 @@ def encode_rhc_integer(cont: str, env: EncodingEnvironment[U]) -> U:
 
     else:
         if len(env.roots) == 0 or len(env.phis) == 0 or len(env.moduli) == 0:
-            code = RHC.encode(env.dim, conti, moduli=env.moduli)
+            code = RHC.encode(env.dim, conti)
             return env.vsa.bundle(code, env.codebook["__int"])  # type: ignore
         else:
             code = RHC.encode(
