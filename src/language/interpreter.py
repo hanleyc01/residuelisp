@@ -1311,7 +1311,7 @@ def decode(
 
 def interpret(
     src: str, vsa: type[T], dim: int, integer_encoding_scheme: IntegerEncodingScheme
-) -> None:
+) -> str | list[Any] | tuple[Any, ...]:
     """Interpret a source-level string of the language.
 
     Args:
@@ -1341,4 +1341,5 @@ def interpret(
 
     result = evaluate(encoded_rep, encoding_env, eval_env)
     decoded_result = decode(result, encoding_env, eval_env)
+    return decoded_result
     # print(decoded_result)

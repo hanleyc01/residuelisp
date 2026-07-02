@@ -1,6 +1,9 @@
 import argparse
 
 from perf import perf
+from language import (EncodingEnvironment, IntegerEncodingScheme, encode, interpret)
+from syntax import lex, parse
+from vsa import FHRR
 
 
 def main() -> None:
@@ -22,7 +25,16 @@ def main() -> None:
         perf()
 
     if args.interpret is not None:
-        pass
+        try:
+            with open(args.interpret) as f:
+                src = f.read()
+        except:
+            print(f"Failed to open {args.interpret}, interpreting it as code!")
+            src = args.interpret
+
+        dim = 1000
+        vsa = FHRR
+        print(interpret(src, vsa, dim, IntegerEncodingScheme.ListIntegers))
 
 
 # from language import (EncodingEnvironment, IntegerEncodingScheme, encode,
