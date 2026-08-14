@@ -5,17 +5,20 @@ symbols.
 import sys
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Any, Generic, TypeVar, cast
+from typing import Any, cast
 
 import numpy as np
 
 from syntax import KEYWORDS, OPERATORS, lex, parse
 from vsa import DEFAULT_MODULI, RHC, VSA, ArrayC128
 
-from .encoding import (AssociativeMemory, EncodingEnvironment,
-                       IntegerEncodingScheme, encode, make_cons)
-
-T = TypeVar("T", VSA[np.complex128], VSA[np.float64])
+from .encoding import (
+    AssociativeMemory,
+    EncodingEnvironment,
+    IntegerEncodingScheme,
+    encode,
+    make_cons,
+)
 
 BASIC_FUNCTIONS = [
     word
@@ -33,7 +36,7 @@ class InterpreterError(Exception):
 
 
 @dataclass
-class EvalEnvironment(Generic[T]):
+class EvalEnvironment[T: VSA[Any]]:
     """The evaluation environment, which contains a local associative memory
     for evaluation contexts, as well as a global definition memory, which
     remains constant throughout the evaluation of the program.
@@ -43,7 +46,9 @@ class EvalEnvironment(Generic[T]):
     locals_: AssociativeMemory[T] | None
 
 
-def is_approx_eq(x: T, y: T, env: EncodingEnvironment[T], floor: float = 0.2) -> bool:
+def is_approx_eq[T: VSA[Any]](
+    x: T, y: T, env: EncodingEnvironment[T], floor: float = 0.2
+) -> bool:
     """Approximate equality between two vector symbols.
 
     Args:
@@ -62,7 +67,9 @@ def is_approx_eq(x: T, y: T, env: EncodingEnvironment[T], floor: float = 0.2) ->
     return similarity > floor
 
 
-def is_nil(value: T, enc_env: EncodingEnvironment[T], floor: float = 0.2) -> bool:
+def is_nil[T: VSA[Any]](
+    value: T, enc_env: EncodingEnvironment[T], floor: float = 0.2
+) -> bool:
     """Test whether or not a value is `nil`.
 
     Args
@@ -75,7 +82,9 @@ def is_nil(value: T, enc_env: EncodingEnvironment[T], floor: float = 0.2) -> boo
     return is_approx_eq(value, enc_env.codebook["nil"], enc_env)
 
 
-def is_false(value: T, enc_env: EncodingEnvironment[T], floor: float = 0.2) -> bool:
+def is_false[T: VSA[Any]](
+    value: T, enc_env: EncodingEnvironment[T], floor: float = 0.2
+) -> bool:
     """Test whether or not a value is `#f`.
 
     Args
@@ -88,7 +97,9 @@ def is_false(value: T, enc_env: EncodingEnvironment[T], floor: float = 0.2) -> b
     return is_approx_eq(value, enc_env.codebook["#f"], enc_env)
 
 
-def is_true(value: T, enc_env: EncodingEnvironment[T], floor: float = 0.2) -> bool:
+def is_true[T: VSA[Any]](
+    value: T, enc_env: EncodingEnvironment[T], floor: float = 0.2
+) -> bool:
     """Test whether or not a value is `#t`.
 
     Args
@@ -101,7 +112,7 @@ def is_true(value: T, enc_env: EncodingEnvironment[T], floor: float = 0.2) -> bo
     return is_approx_eq(value, enc_env.codebook["#t"], enc_env)
 
 
-def check_atomic(
+def check_atomic[T: VSA[Any]](
     expr: T,
     enc_env: EncodingEnvironment[T],
     floor: float = 0.2,
@@ -130,7 +141,7 @@ def check_atomic(
     )
 
 
-def check_function(
+def check_function[T: VSA[Any]](
     expr: T,
     enc_env: EncodingEnvironment[T],
     floor: float = 0.2,
@@ -170,7 +181,7 @@ def check_function(
     return cleanuped
 
 
-def check_int(
+def check_int[T: VSA[Any]](
     expr: T,
     enc_env: EncodingEnvironment[T],
     floor: float = 0.2,
@@ -205,7 +216,9 @@ def check_int(
     return cleanuped
 
 
-def car(expr: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+def car[T: VSA[Any]](
+    expr: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
+) -> T:
     """Treat the expression as a semantic pointer and dereference it, returning
     the second element of the underlying tuple chunk.
 
@@ -231,7 +244,9 @@ def car(expr: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) 
     return recalled_value
 
 
-def cdr(expr: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+def cdr[T: VSA[Any]](
+    expr: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
+) -> T:
     """Treat the expression as a semantic pointer and dereference it,
     returning the first element of an underlying tuple chunk.
 
@@ -256,7 +271,9 @@ def cdr(expr: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) 
     return recalled_value
 
 
-def cons(rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+def cons[T: VSA[Any]](
+    rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
+) -> T:
     """Create a new tuple out of the operands. For more information about how
     this works, see `.language.interpreter.make_cons`.
 
@@ -283,13 +300,15 @@ def cons(rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T])
 
 
 # test whether both arguments are non-nil and not-false
-def _and_(lhs: T, rhs: T, enc_env: EncodingEnvironment[T]) -> bool:
+def _and_[T: VSA[Any]](lhs: T, rhs: T, enc_env: EncodingEnvironment[T]) -> bool:
     return not (is_nil(lhs, enc_env) or is_false(lhs, enc_env)) and not (
         is_nil(lhs, enc_env) or is_false(lhs, enc_env)
     )
 
 
-def and_(rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+def and_[T: VSA[Any]](
+    rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
+) -> T:
     """Test whether or not the arguments are all true. Accepts only two
     arguments.
 
@@ -317,7 +336,7 @@ def and_(rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T])
 
 
 # compare by value two vector symbols
-def equals(
+def equals[T: VSA[Any]](
     lhs: T, rhs: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
 ) -> T:
     lhs_is_atomic = check_atomic(lhs, enc_env)
@@ -362,7 +381,9 @@ def equals(
         )
 
 
-def eq(rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+def eq[T: VSA[Any]](
+    rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
+) -> T:
     """Compare two values to see if they are the same.
 
     Args:
@@ -386,7 +407,9 @@ def eq(rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -
     return equals(ecar, ecadr, enc_env, eval_env)
 
 
-def atom(rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+def atom[T: VSA[Any]](
+    rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
+) -> T:
     """Test whether the operand is an atomic value or not.
 
     Args:
@@ -404,7 +427,9 @@ def atom(rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T])
     return check_atomic(arg, enc_env)
 
 
-def int_(rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+def int_[T: VSA[Any]](
+    rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
+) -> T:
     """Test whether the operand is an integer value or not.
 
     Args:
@@ -424,7 +449,9 @@ def int_(rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T])
         return check_int(value, enc_env)
 
 
-def if_(rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+def if_[T: VSA[Any]](
+    rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
+) -> T:
     """Conditional evaluation of the branches. Tests the condition as to
     whether or not it is true, and the exectutes the second argument if the
     result is true. Otherwise, executes the third argument.
@@ -462,7 +489,9 @@ def if_(rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) 
 
 
 # TODO: add support for quoting
-def quote(rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+def quote[T: VSA[Any]](
+    rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
+) -> T:
     """Capture the following code as raw syntax which can be later evaluated.
     Syntax which is quoted can be later interpreted using the function
     `unquote`.
@@ -482,7 +511,7 @@ def quote(rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
 
 
 # switch this to different
-def list_add(
+def list_add[T: VSA[Any]](
     rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
 ) -> T:
     """List addition.
@@ -518,7 +547,7 @@ def list_add(
         return make_cons(enc_env.codebook["nil"], rand_, enc_env)
 
 
-def list_sub(
+def list_sub[T: VSA[Any]](
     rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
 ) -> T:
     """List subtraction.
@@ -550,7 +579,7 @@ def list_sub(
         return list_sub(args, enc_env, eval_env)
 
 
-def list_mul(
+def list_mul[T: VSA[Any]](
     rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
 ) -> T:
     """List multiplication.
@@ -583,7 +612,7 @@ def list_mul(
         return list_add(add_args, enc_env, eval_env)
 
 
-def rhc_add(
+def rhc_add[T: VSA[Any]](
     rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
 ) -> T:
     """Add together two integer elements using Residue Hyperdimensional Computing.
@@ -608,7 +637,7 @@ def rhc_add(
     return (unwrapped_lhs * unwrapped_rhs) + enc_env.codebook["__int"]  # type: ignore
 
 
-def rhc_sub(
+def rhc_sub[T: VSA[Any]](
     rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
 ) -> T:
     """Subtract the argument list using RHC.
@@ -633,7 +662,7 @@ def rhc_sub(
     return (unwrapped_lhs / unwrapped_rhs) + enc_env.codebook["__int"]  # type: ignore
 
 
-def rhc_mul(
+def rhc_mul[T: VSA[Any]](
     rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
 ) -> T:
     """Residue Hyperdimensional Computing multiplication.
@@ -649,13 +678,15 @@ def rhc_mul(
     raise Exception("TODO")
 
 
-def rhc_div(
+def rhc_div[T: VSA[Any]](
     rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
 ) -> T:
     raise Exception("TODO")
 
 
-def add(rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+def add[T: VSA[Any]](
+    rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
+) -> T:
     """Addition of operands.
 
     The form of the function depends on `.encoding.IntegerEncodingScheme`. If
@@ -689,7 +720,9 @@ def add(rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) 
         )
 
 
-def sub(rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+def sub[T: VSA[Any]](
+    rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
+) -> T:
     """Subtraction of operands.
 
     The form of the function depends on `.encoding.IntegerEncodingScheme`. If
@@ -723,7 +756,9 @@ def sub(rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) 
         )
 
 
-def mul(rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+def mul[T: VSA[Any]](
+    rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
+) -> T:
     """Product of operands.
 
     The form of the function depends on `.encoding.IntegerEncodingScheme`. If
@@ -757,7 +792,9 @@ def mul(rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) 
         )
 
 
-def div(rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) -> T:
+def div[T: VSA[Any]](
+    rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
+) -> T:
     """Division of operands.
 
     The form of the function depends on `.encoding.IntegerEncodingScheme`. If
@@ -792,7 +829,7 @@ def div(rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]) 
         )
 
 
-def make_function_pointer(
+def make_function_pointer[T: VSA[Any]](
     args: T, body: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
 ) -> T:
     """Allocate a semantic function pointer for the arguments and the body.
@@ -826,7 +863,7 @@ def make_function_pointer(
     return ptr
 
 
-def evaluate_lambda(
+def evaluate_lambda[T: VSA[Any]](
     function_body: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
 ) -> T:
     """Evaluate a lambda expression, converting it into a semantic function
@@ -865,7 +902,7 @@ def evaluate_lambda(
     return make_function_pointer(args, body, enc_env, eval_env)
 
 
-def evaluate_define(
+def evaluate_define[T: VSA[Any]](
     define_body: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
 ) -> T:
     """Evaluate a definition, associates a value to a name in `eval_env`.
@@ -888,7 +925,7 @@ def evaluate_define(
     return enc_env.codebook["nil"]
 
 
-def get_args(
+def get_args[T: VSA[Any]](
     expr: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
 ) -> T:
     """Get the arguments from a function pointer.
@@ -915,7 +952,7 @@ def get_args(
     return enc_env.vsa.from_array(args)
 
 
-def get_body(
+def get_body[T: VSA[Any]](
     expr: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
 ) -> T:
     """Get the body of a function pointer.
@@ -943,7 +980,7 @@ def get_body(
     return enc_env.vsa.from_array(args)
 
 
-def tuple_to_list(
+def tuple_to_list[T: VSA[Any]](
     listexpr: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
 ) -> list[T]:
     """Convert a tuple into a list."""
@@ -964,7 +1001,7 @@ def tuple_to_list(
     return xs
 
 
-def associate(
+def associate[T: VSA[Any]](
     params: T, args: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
 ) -> AssociativeMemory[T]:
     """Associate the parameters and arguments of a function call."""
@@ -985,7 +1022,7 @@ def associate(
     return local_assoc
 
 
-def update_locals(
+def update_locals[T: VSA[Any]](
     locals_: AssociativeMemory[T] | None, args: AssociativeMemory[T]
 ) -> AssociativeMemory[T]:
     """Update locals, if it exists."""
@@ -998,7 +1035,7 @@ def update_locals(
         return new_mem
 
 
-def evaluate_function_application(
+def evaluate_function_application[T: VSA[Any]](
     operator: T,
     operand: T,
     enc_env: EncodingEnvironment[T],
@@ -1036,10 +1073,7 @@ def evaluate_function_application(
     return evaluate(body, enc_env, local_eval_env)
 
 
-def evaluate_application[T: (
-    VSA[np.complex128],
-    VSA[np.float64],
-)](
+def evaluate_application[T: VSA[Any]](
     rator: T, rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
 ) -> T:
     """Evaluate an application of either a built-in function or a user-defined
@@ -1179,7 +1213,7 @@ def evaluate_application[T: (
     raise Exception("TODO")
 
 
-def evaluate(
+def evaluate[T: VSA[Any]](
     expr: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
 ) -> T:
     """Evalute an encoded vector-symbol.
@@ -1221,7 +1255,7 @@ def evaluate(
         return evaluate_application(head, tail, enc_env, eval_env)
 
 
-def closest(value: T, enc_env: EncodingEnvironment[T]) -> str:
+def closest[T: VSA[Any]](value: T, enc_env: EncodingEnvironment[T]) -> str:
     """Return the closest key for which `value` matches too in the encoding
     environment's codebook.
 
@@ -1245,12 +1279,16 @@ def closest(value: T, enc_env: EncodingEnvironment[T]) -> str:
 _RHC_CACHE = []
 
 
-def _initialize_rhc_cache(enc_env: EncodingEnvironment[T], max_: int) -> None:
+def _initialize_rhc_cache[T: VSA[Any]](
+    enc_env: EncodingEnvironment[T], max_: int
+) -> None:
     for i in range(max_):
         _RHC_CACHE.append(RHC.encode(enc_env.dim, i, enc_env.moduli).data)
 
 
-def decode_rhc(value: RHC, enc_env: EncodingEnvironment[T], floor: float = 0.2) -> str:
+def decode_rhc[T: VSA[Any]](
+    value: RHC, enc_env: EncodingEnvironment[T], floor: float = 0.2
+) -> str:
     """Decode an RHC encoded integer into a human-readable string format.
 
     Args:
@@ -1271,7 +1309,7 @@ def decode_rhc(value: RHC, enc_env: EncodingEnvironment[T], floor: float = 0.2) 
     return str(keys[max_sim])
 
 
-def decode(
+def decode[T: VSA[Any]](
     expr: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
 ) -> str | list[Any] | tuple[Any, ...]:
     """Decode a vector symbol to a Python object.
@@ -1303,14 +1341,14 @@ def decode(
         right = decode(cdr_, enc_env, eval_env)
 
         if isinstance(right, list):
-            return [left, *right]  # type: ignore
+            return [left, *right]
         elif right == "nil":
             return [left]
         else:
             return (left, right)
 
 
-def interpret(
+def interpret[T: VSA[Any]](
     src: str, vsa: type[T], dim: int, integer_encoding_scheme: IntegerEncodingScheme
 ) -> str | list[Any] | tuple[Any, ...]:
     """Interpret a source-level string of the language.

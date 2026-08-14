@@ -6,16 +6,24 @@ import sys
 from collections import UserDict
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Generic, TypeVar, cast
+from typing import Any, Generic
 
 import numpy as np
 from numpy.typing import NDArray
 
-from syntax import (KEYWORDS, OPERATORS, VALUES, Intr, IntrAtom, IntrList,
-                    Token, TokenKind)
-from vsa import FHRR, HRR, RHC, VSA, AnyVSA, ArrayC128, VSAdtype
+from syntax import (
+    KEYWORDS,
+    OPERATORS,
+    VALUES,
+    Intr,
+    IntrAtom,
+    IntrList,
+    Token,
+    TokenKind,
+)
+from vsa import FHRR, HRR, RHC, VSA, AnyVSA, ArrayC128
 
-U = TypeVar("U", VSA[np.complex128], VSA[np.float64])
+# U = TypeVar("U", VSA[np.complex128], VSA[np.float64])
 
 
 class IntegerEncodingScheme(Enum):
@@ -31,7 +39,7 @@ class IntegerEncodingScheme(Enum):
     RHCIntegers = auto()
 
 
-class CleanupMemory(Generic[U]):
+class CleanupMemory[U: VSA[Any]]:
     """A simple clean-up memory.
 
     Args:
@@ -46,7 +54,7 @@ class CleanupMemory(Generic[U]):
     """The vector symbolic architecture class that will be used for
     comparison.
     """
-    memory_matrix: NDArray[np.float64] | NDArray[np.complex128]
+    memory_matrix: NDArray[Any]
     """The raw memory matrix."""
     dim: int
     """The dimensionality of the memory."""
@@ -85,7 +93,11 @@ class CleanupMemory(Generic[U]):
         """
         if self.size >= self.max_trace:
             self.memory_matrix = np.concatenate(
-                [self.memory_matrix, np.zeros((self.incr, self.dim))], axis=0
+                [
+                    self.memory_matrix,
+                    np.zeros((self.incr, self.dim), dtype=self.vsa.dtype),
+                ],
+                axis=0,
             )
             self.max_trace += self.incr
 
@@ -110,7 +122,7 @@ class CleanupMemory(Generic[U]):
         return self.vsa.from_array(self.memory_matrix[np.argmax(activations), :])  # type: ignore
 
 
-class AssociativeMemory(Generic[U]):
+class AssociativeMemory[U: VSA[Any]]:
     """Associative memory used for semantic pointers.
 
     The associative memmory pulls double duty, both as a store for semantic
@@ -150,7 +162,7 @@ class AssociativeMemory(Generic[U]):
         """Allocate trace into the associative memory, assigning it a new
         semantic pointer, and returning back that pointer.
         """
-        ptr = self.vsa.new(self.dim)
+        ptr: U = self.vsa.new(self.dim)
         self.assoc[ptr] = trace
         return ptr
 
@@ -179,7 +191,7 @@ class AssociativeMemory(Generic[U]):
         return None
 
 
-class Codebook(Generic[U], UserDict[str, U]):
+class Codebook[U: VSA[Any]](UserDict[str, U]):
     """A Codebook is just a built-in dictionary, which has the additional
     `reverse` method.
 
@@ -191,7 +203,7 @@ class Codebook(Generic[U], UserDict[str, U]):
         return {v: k for (k, v) in self.data.items()}
 
 
-class EncodingEnvironment(Generic[U]):
+class EncodingEnvironment[U: VSA[Any]]:
     """Class for representing the encoding environment.
 
     The encoding environment contains all of the things necessary for
@@ -253,13 +265,13 @@ class EncodingEnvironment(Generic[U]):
     def initial_codebook(vsa: type[U], dim: int) -> dict[str, U]:
         codebook = {}
 
-        for keyword in KEYWORDS.keys():
+        for keyword in KEYWORDS:
             codebook[keyword] = vsa.new(dim)
 
-        for operator in OPERATORS.keys():
+        for operator in OPERATORS:
             codebook[operator] = vsa.new(dim)
 
-        for value in VALUES.keys():
+        for value in VALUES:
             codebook[value] = vsa.new(dim)
 
         # tuple chunks
@@ -285,7 +297,7 @@ class EncodingError(Exception):
     msg: str
 
 
-def encode_list_integer(cont: str, env: EncodingEnvironment[U]) -> U:
+def encode_list_integer[U: VSA[Any]](cont: str, env: EncodingEnvironment[U]) -> U:
     """Encode an integer as a list
 
     Args:
@@ -301,7 +313,7 @@ def encode_list_integer(cont: str, env: EncodingEnvironment[U]) -> U:
 
     try:
         conti = int(cont)
-    except:
+    except ValueError:
         raise EncodingError(f"`{cont}` is not a valid integer!")
 
     if conti < 0:
@@ -311,7 +323,6 @@ def encode_list_integer(cont: str, env: EncodingEnvironment[U]) -> U:
         return env.codebook["nil"]
 
     else:
-
         base = env.codebook["nil"]
         for i in range(conti):
             base = make_cons(env.codebook["nil"], base, env)
@@ -319,7 +330,7 @@ def encode_list_integer(cont: str, env: EncodingEnvironment[U]) -> U:
         return base
 
 
-def encode_rhc_integer(cont: str, env: EncodingEnvironment[U]) -> U:
+def encode_rhc_integer[U: VSA[Any]](cont: str, env: EncodingEnvironment[U]) -> U:
     """Encode an integer using RHC.
 
     Args:
@@ -329,7 +340,7 @@ def encode_rhc_integer(cont: str, env: EncodingEnvironment[U]) -> U:
     print("encoding rhc integer", cont)
     try:
         conti = int(cont)
-    except:
+    except ValueError:
         raise EncodingError(f"`{cont}` is not a valid integer!")
 
     if conti < 0:
@@ -348,7 +359,7 @@ def encode_rhc_integer(cont: str, env: EncodingEnvironment[U]) -> U:
             return env.vsa.bundle(code, env.codebook["__int"])  # type: ignore
 
 
-def encode_atom(cont: str, env: EncodingEnvironment[U]) -> U:
+def encode_atom[U: VSA[Any]](cont: str, env: EncodingEnvironment[U]) -> U:
     """Encode an atom. If the atom is already present, return that value,
     otherwise create a new value and return that.
 
@@ -370,7 +381,7 @@ def encode_atom(cont: str, env: EncodingEnvironment[U]) -> U:
         return new_symbol
 
 
-def make_cons(head: U, tail: U, env: EncodingEnvironment[U]) -> U:
+def make_cons[U: VSA[Any]](head: U, tail: U, env: EncodingEnvironment[U]) -> U:
     """Make a semantic pointer to a tuple chunk.
 
     The format of the tuple chunk is similar to that of the function
@@ -416,7 +427,7 @@ def make_cons(head: U, tail: U, env: EncodingEnvironment[U]) -> U:
     return ptr
 
 
-def encode_list(
+def encode_list[U: VSA[Any]](
     xs: list[Intr],
     env: EncodingEnvironment[U],
 ) -> U:
@@ -447,7 +458,7 @@ def encode_list(
         return make_cons(headv, tailv, env)
 
 
-def encode(
+def encode[U: VSA[Any]](
     intr: Intr,
     env: EncodingEnvironment[U],
 ) -> U:
@@ -466,9 +477,7 @@ def encode(
     """
 
     match intr:
-
         case IntrAtom(x):
-
             if (
                 x.kind == TokenKind.Int
                 and env.integer_encoding_scheme == IntegerEncodingScheme.ListIntegers
@@ -488,5 +497,4 @@ def encode(
                 return encode_atom(x.cont, env)
 
         case IntrList(xs):
-
             return encode_list(xs, env)
