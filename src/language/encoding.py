@@ -2,11 +2,10 @@
 representaitons into vector-symbolic representations.
 """
 
-import sys
 from collections import UserDict
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Any, Generic
+from typing import Any, ClassVar
 
 import numpy as np
 from numpy.typing import NDArray
@@ -18,10 +17,9 @@ from syntax import (
     Intr,
     IntrAtom,
     IntrList,
-    Token,
     TokenKind,
 )
-from vsa import FHRR, HRR, RHC, VSA, AnyVSA, ArrayC128
+from vsa import FHRR, HRR, RHC, VSA, ArrayC128
 
 # U = TypeVar("U", VSA[np.complex128], VSA[np.float64])
 
@@ -119,7 +117,7 @@ class CleanupMemory[U: VSA[Any]]:
             The recalled trace.
         """
         activations = [self.vsa.similarity(x.data, m) for m in self.memory_matrix]
-        return self.vsa.from_array(self.memory_matrix[np.argmax(activations), :])  # type: ignore
+        return self.vsa.from_array(self.memory_matrix[np.argmax(activations), :])
 
 
 class AssociativeMemory[U: VSA[Any]]:
@@ -238,9 +236,9 @@ class EncodingEnvironment[U: VSA[Any]]:
     associative_memory: AssociativeMemory[U]
     integer_encoding_scheme: IntegerEncodingScheme
 
-    roots: list[ArrayC128] = []
-    phis: list[ArrayC128] = []
-    moduli: list[int] = []
+    roots: ClassVar[list[ArrayC128]] = []
+    phis: ClassVar[list[ArrayC128]] = []
+    moduli: ClassVar[list[int]] = []
 
     def __init__(
         self,
