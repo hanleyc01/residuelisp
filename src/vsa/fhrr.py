@@ -8,7 +8,6 @@ import cmath
 import math
 
 import numpy as np
-import numpy.typing as npt
 
 from .common import ArrayC128
 from .hrr import HRR
@@ -28,8 +27,8 @@ class FHRR(VSA[np.complex128]):
         self.data = data
 
     @staticmethod
-    def from_array(data: ArrayC128) -> "FHRR":
-        return FHRR(data)
+    def from_array(array: ArrayC128) -> FHRR:
+        return FHRR(array)
 
     @staticmethod
     def uniform(dim: int) -> FHRR:
@@ -136,71 +135,47 @@ class FHRR(VSA[np.complex128]):
         """
         return float(np.dot(np.conjugate(x.T), y).real / x.size)
 
-    def __add__(self, rhs: FHRR | float | int) -> FHRR:
+    def __add__(self, rhs: FHRR | float) -> FHRR:
         """See `FHRR.bundle`."""
         if isinstance(rhs, FHRR):
             return FHRR(FHRR.bundle(self.data, rhs.data))
-        elif isinstance(rhs, int):
-            return FHRR(self.data + rhs)
-        elif isinstance(rhs, float):
-            return FHRR(self.data + rhs)
         else:
-            raise TypeError(f"Innapropriate argument type: {type(rhs)}")
+            return FHRR(self.data + rhs)
 
-    def __radd__(self, rhs: int | float | FHRR) -> FHRR:
+    def __radd__(self, rhs: FHRR | float) -> FHRR:
         """See `FHRR.bundle`."""
         if isinstance(rhs, FHRR):
             return FHRR(self.data + rhs.data)
-        elif isinstance(rhs, int):
-            return FHRR(self.data + rhs)
-        elif isinstance(rhs, float):
-            return FHRR(self.data + rhs)
         else:
-            raise TypeError(f"Innapropriate argument type: {type(rhs)}")
+            return FHRR(self.data + rhs)
 
-    def __sub__(self, rhs: int | float | FHRR) -> FHRR:
+    def __sub__(self, rhs: FHRR | float) -> FHRR:
         """Element-wise subtraction."""
         if isinstance(rhs, FHRR):
             return FHRR(self.data - rhs.data)
-        elif isinstance(rhs, int):
-            return FHRR(self.data - rhs)
-        elif isinstance(rhs, float):
-            return FHRR(self.data - rhs)
         else:
-            raise TypeError(f"Innapropriate argument type: {type(rhs)}")
+            return FHRR(self.data - rhs)
 
-    def __mul__(self, rhs: int | float | FHRR) -> FHRR:
+    def __mul__(self, rhs: FHRR | float) -> FHRR:
         """See `FHRR.bind`."""
         if isinstance(rhs, FHRR):
             return FHRR(FHRR.bind(self.data, rhs.data))
-        elif isinstance(rhs, int):
-            return FHRR(self.data * rhs)
-        elif isinstance(rhs, float):
-            return FHRR(self.data * rhs)
         else:
-            raise TypeError(f"Innapropriate argument type: {type(rhs)}")
+            return FHRR(self.data * rhs)
 
-    def __rmul__(self, rhs: int | float | FHRR) -> FHRR:
+    def __rmul__(self, rhs: FHRR | float) -> FHRR:
         """See `FHRR.bind`."""
         if isinstance(rhs, FHRR):
             return FHRR(FHRR.bind(self.data, rhs.data))
-        elif isinstance(rhs, int):
-            return FHRR(self.data * rhs)
-        elif isinstance(rhs, float):
-            return FHRR(self.data * rhs)
         else:
-            raise TypeError(f"Innapropriate argument type: {type(rhs)}")
+            return FHRR(self.data * rhs)
 
-    def __truediv__(self, rhs: FHRR | int | float) -> FHRR:
+    def __truediv__(self, rhs: FHRR | float) -> FHRR:
         """See `FHRR.unbind`."""
         if isinstance(rhs, FHRR):
             return FHRR(FHRR.unbind(self.data, rhs.data))
-        elif isinstance(rhs, int):
-            return FHRR(self.data / rhs)
-        elif isinstance(rhs, float):
-            return FHRR((self.data / rhs).astype(np.float64))
         else:
-            raise TypeError(f"Innapropriate argument type: {type(rhs)}")
+            return FHRR(self.data / rhs)
 
     def __invert__(self) -> FHRR:
         """See `FHRR.inv`."""
@@ -220,7 +195,7 @@ class FHRR(VSA[np.complex128]):
             return self.data @ other.data
         elif isinstance(other, np.ndarray) and other.dtype == np.float64:
             if len(other.shape) == 2:
-                return (self.data @ other).astype(np.float64)
+                return (self.data @ other).astype(np.complex128)
             else:
                 return self.data @ other
         else:
