@@ -45,6 +45,7 @@ class RHC(VSA[np.complex128]):
     data: npt.NDArray[np.complex128]
     moduli: list[int] = DEFAULT_MODULI
     z_ms: list[npt.NDArray[np.complex128]] = []
+    dtype = np.complex128
 
     def __init__(
         self,

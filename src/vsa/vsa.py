@@ -4,7 +4,7 @@ Module defining the abstract base class of `VSA`s.
 """
 
 from abc import ABCMeta, abstractmethod
-from typing import Self
+from typing import ClassVar, Self
 
 import numpy as np
 import numpy.typing as npt
@@ -17,6 +17,7 @@ class VSA[T: np.generic](metaclass=ABCMeta):
     """
 
     data: npt.NDArray[T]
+    dtype: ClassVar[type[np.generic]]
 
     @staticmethod
     @abstractmethod
