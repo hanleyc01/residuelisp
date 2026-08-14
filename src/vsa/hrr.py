@@ -12,6 +12,7 @@ from typing import cast
 import numpy as np
 import numpy.typing as npt
 from numpy.fft import fft, ifft
+from typing_extensions import override
 
 from . import vsa
 from .common import ArrayF64
@@ -47,8 +48,9 @@ class HRR(vsa.VSA[np.float64]):
         data /= np.linalg.norm(data)
         return HRR(data)
 
+    @override
     @staticmethod
-    def from_array(x: ArrayF64) -> "HRR":
+    def from_array(array: ArrayF64) -> HRR:
         """Create a new HRR from an array.
 
         Args:
@@ -57,8 +59,9 @@ class HRR(vsa.VSA[np.float64]):
         Returns:
             A new HRR vector-symbol, drawn from `x`.
         """
-        return HRR(x)
+        return HRR(array)
 
+    @override
     @staticmethod
     def new(dim: int) -> HRR:
         """Create a new vector-symbol.
@@ -71,6 +74,7 @@ class HRR(vsa.VSA[np.float64]):
         """
         return HRR.normal(dim)
 
+    @override
     @staticmethod
     def bind(x: ArrayF64, y: ArrayF64) -> ArrayF64:
         """The product operation in the HRR VSA.
@@ -85,6 +89,7 @@ class HRR(vsa.VSA[np.float64]):
         """
         return cast(ArrayF64, ifft(fft(x) * fft(y)).real)
 
+    @override
     @staticmethod
     def bundle(x: ArrayF64, y: ArrayF64) -> ArrayF64:
         """The HRR VSA sum operation.
@@ -111,6 +116,7 @@ class HRR(vsa.VSA[np.float64]):
 
         return x[np.r_[0, x.size - 1 : 0 : -1]]
 
+    @override
     @staticmethod
     def unbind(x: ArrayF64, y: ArrayF64) -> ArrayF64:
         """The unbinding operatin in the HRR VSA.
@@ -125,6 +131,7 @@ class HRR(vsa.VSA[np.float64]):
         """
         return HRR.bind(x, HRR.inv(y))
 
+    @override
     @staticmethod
     def similarity(x: ArrayF64, y: ArrayF64) -> float:
         """Approximated kernel for HRR. Measures the 'distance' between
@@ -144,71 +151,49 @@ class HRR(vsa.VSA[np.float64]):
             mag = float(nrm)
         return float(np.real(inner) / np.linalg.norm(x) * np.linalg.norm(y))
 
-    def __add__(self, rhs: HRR | float | int) -> HRR:
+    def __add__(self, rhs: HRR | float) -> HRR:
         """See `HRR.bundle`."""
         if isinstance(rhs, HRR):
             return HRR(HRR.bundle(self.data, rhs.data))
-        elif isinstance(rhs, int):
-            return HRR(self.data + rhs)
-        elif isinstance(rhs, float):
-            return HRR(self.data + rhs)
         else:
-            raise TypeError(f"Innapropriate argument type: {type(rhs)}")
+            return HRR(self.data + rhs)
 
-    def __radd__(self, rhs: int | float | HRR) -> HRR:
+    def __radd__(self, rhs: HRR | float) -> HRR:
         """See `HRR.bundle`."""
         if isinstance(rhs, HRR):
             return HRR(self.data + rhs.data)
-        elif isinstance(rhs, int):
-            return HRR(self.data + rhs)
-        elif isinstance(rhs, float):
-            return HRR(self.data + rhs)
         else:
-            raise TypeError(f"Innapropriate argument type: {type(rhs)}")
+            return HRR(self.data + rhs)
 
-    def __sub__(self, rhs: int | float | HRR) -> HRR:
+    def __sub__(self, rhs: HRR | float) -> HRR:
         """Element-wise subtraction."""
         if isinstance(rhs, HRR):
             return HRR(self.data - rhs.data)
-        elif isinstance(rhs, int):
-            return HRR(self.data - rhs)
-        elif isinstance(rhs, float):
-            return HRR(self.data - rhs)
         else:
-            raise TypeError(f"Innapropriate argument type: {type(rhs)}")
+            return HRR(self.data - rhs)
 
-    def __mul__(self, rhs: int | float | HRR) -> HRR:
+    def __mul__(self, rhs: HRR | float) -> HRR:
         """Scalar multiplication or `HRR.bind`."""
         if isinstance(rhs, HRR):
             return HRR(HRR.bind(self.data, rhs.data))
-        elif isinstance(rhs, int):
-            return HRR(self.data * rhs)
-        elif isinstance(rhs, float):
-            return HRR(self.data * rhs)
         else:
-            raise TypeError(f"Innapropriate argument type: {type(rhs)}")
+            return HRR(self.data * rhs)
 
-    def __rmul__(self, rhs: int | float | HRR) -> HRR:
+    def __rmul__(self, rhs: HRR | float) -> HRR:
         """Scalar multiplication or `HRR.bind`."""
         if isinstance(rhs, HRR):
             return HRR(HRR.bind(self.data, rhs.data))
-        elif isinstance(rhs, int):
-            return HRR(self.data * rhs)
-        elif isinstance(rhs, float):
-            return HRR(self.data * rhs)
         else:
-            raise TypeError(f"Innapropriate argument type: {type(rhs)}")
+            return HRR(self.data * rhs)
 
-    def __truediv__(self, rhs: HRR | int | float) -> HRR:
+    def __truediv__(self, rhs: HRR | float) -> HRR:
         """Scalar division or `HRR.unbind`."""
         if isinstance(rhs, HRR):
             return HRR(HRR.unbind(self.data, rhs.data))
         elif isinstance(rhs, int):
             return HRR(self.data / rhs)
-        elif isinstance(rhs, float):
-            return HRR((self.data / rhs).astype(np.float64))
         else:
-            raise TypeError(f"Innapropriate argument type: {type(rhs)}")
+            return HRR((self.data / rhs).astype(np.float64))
 
     def __invert__(self) -> HRR:
         """See `HRR.inv`."""
@@ -226,25 +211,23 @@ class HRR(vsa.VSA[np.float64]):
         """Matrix multiplication."""
         if isinstance(other, HRR):
             return self.data @ other.data
-        elif isinstance(other, np.ndarray) and other.dtype == np.float64:
+        else:
             if len(other.shape) == 2:
                 return (self.data @ other).astype(np.float64)
             else:
                 return self.data @ other
-        else:
-            raise TypeError(f"Innapropriate argument type {type(other)}")
 
     def sim(self, other: HRR | ArrayF64) -> float:
         """See `HRR.similarity`."""
         if isinstance(other, HRR):
             return HRR.similarity(self.data, other.data)
-        elif isinstance(other, np.ndarray) and other.dtype == np.float64:
-            return HRR.similarity(self.data, other)
         else:
-            raise TypeError(f"Innapropriate argument type {type(other)}")
+            return HRR.similarity(self.data, other)
 
+    @override
     def __str__(self) -> str:
         return f"HRR({self.data})"
 
+    @override
     def __hash__(self) -> int:
         return hash(self.data.tobytes())
