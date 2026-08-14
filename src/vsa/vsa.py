@@ -4,6 +4,7 @@ Module defining the abstract base class of `VSA`s.
 """
 
 from abc import ABCMeta, abstractmethod
+from typing import Self
 
 import numpy as np
 import numpy.typing as npt
@@ -41,15 +42,15 @@ class VSA[T: np.generic](metaclass=ABCMeta):
         """Vector symbolic similarity."""
         ...
 
-    @staticmethod
+    @classmethod
     @abstractmethod
-    def new(dim: int) -> "VSA[T]":
+    def new(cls, dim: int) -> Self:
         """Initialize a new vector."""
         ...
 
-    @staticmethod
+    @classmethod
     @abstractmethod
-    def from_array(array: npt.NDArray[T]) -> "VSA[T]":
+    def from_array(cls, array: npt.NDArray[T]) -> Self:
         """Create a VSA from an array."""
         ...
 

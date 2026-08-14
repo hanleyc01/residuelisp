@@ -24,6 +24,7 @@ class HRR(vsa.VSA[np.float64]):
     """
 
     data: ArrayF64
+    dtype = np.float64
 
     def __init__(self, data: ArrayF64) -> None:
         self.data = data
@@ -47,8 +48,8 @@ class HRR(vsa.VSA[np.float64]):
         return HRR(data)
 
     @override
-    @staticmethod
-    def from_array(array: ArrayF64) -> HRR:
+    @classmethod
+    def from_array(cls, array: ArrayF64) -> HRR:
         """Create a new HRR from an array.
 
         Args:
@@ -57,11 +58,11 @@ class HRR(vsa.VSA[np.float64]):
         Returns:
             A new HRR vector-symbol, drawn from `x`.
         """
-        return HRR(array)
+        return cls(array)
 
     @override
-    @staticmethod
-    def new(dim: int) -> HRR:
+    @classmethod
+    def new(cls, dim: int) -> HRR:
         """Create a new vector-symbol.
 
         Args:
@@ -70,7 +71,7 @@ class HRR(vsa.VSA[np.float64]):
         Returns:
             A new HRR vector-symbol.
         """
-        return HRR.normal(dim)
+        return cls.normal(dim)
 
     @override
     @staticmethod

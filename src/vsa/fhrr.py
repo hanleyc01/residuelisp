@@ -22,13 +22,14 @@ class FHRR(VSA[np.complex128]):
     """
 
     data: ArrayC128
+    dtype = np.complex128
 
     def __init__(self, data: ArrayC128) -> None:
         self.data = data
 
-    @staticmethod
-    def from_array(array: ArrayC128) -> FHRR:
-        return FHRR(array)
+    @classmethod
+    def from_array(cls, array: ArrayC128) -> FHRR:
+        return cls(array)
 
     @staticmethod
     def uniform(dim: int) -> FHRR:
@@ -56,8 +57,8 @@ class FHRR(VSA[np.complex128]):
         complex_array = np.ndarray.astype(np.fft.fft(x.data), np.complex128)
         return FHRR(complex_array)
 
-    @staticmethod
-    def new(dim: int) -> FHRR:
+    @classmethod
+    def new(cls, dim: int) -> FHRR:
         """Static method creating a new FHRR using `FHRR.uniform`.
 
         Args:
@@ -66,7 +67,7 @@ class FHRR(VSA[np.complex128]):
         Returns:
             A new FHRR vector symbol.
         """
-        return FHRR.uniform(dim)
+        return cls.uniform(dim)
 
     @staticmethod
     def bind(x: ArrayC128, y: ArrayC128) -> ArrayC128:

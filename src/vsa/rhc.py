@@ -72,7 +72,7 @@ class RHC(VSA[np.complex128]):
 
         data: npt.NDArray[np.complex128] = np.ones(shape=(dim,), dtype=np.complex128)
         for z_m in RHC.z_ms:
-            data = data * (z_m ** x)
+            data = data * (z_m**x)
         RHC.codebook[x] = data
         return RHC(data)
 
@@ -274,7 +274,9 @@ def _act(v: npt.NDArray[np.complex128]) -> npt.NDArray[np.complex128]:
     return np.divide(v, mag, where=(mag != 0))
 
 
-def resonator_decoding(residue_number: RHC, max_iters: int = 200) -> tuple[
+def resonator_decoding(
+    residue_number: RHC, max_iters: int = 200
+) -> tuple[
     list[dict[int, npt.NDArray[np.complex128]]],
     Mapping[int, npt.NDArray[np.complex128]],
 ]:
