@@ -3,15 +3,13 @@
 Module defining the abstract base class of `VSA`s.
 """
 
-from abc import ABCMeta, abstractmethod, abstractproperty
-from typing import Any, Generic, TypeVar
+from abc import ABCMeta, abstractmethod
 
+import numpy as np
 import numpy.typing as npt
 
-T = TypeVar("T", bound=Any)
 
-
-class VSA(Generic[T], metaclass=ABCMeta):
+class VSA[T: np.generic](metaclass=ABCMeta):
     """Abstract base class of all VSA implementations.
 
     We define this class in order
@@ -19,39 +17,39 @@ class VSA(Generic[T], metaclass=ABCMeta):
 
     data: npt.NDArray[T]
 
-    @classmethod
+    @staticmethod
     @abstractmethod
-    def bind(cls, x: npt.NDArray[T], y: npt.NDArray[T]) -> npt.NDArray[T]:
+    def bind(x: npt.NDArray[T], y: npt.NDArray[T]) -> npt.NDArray[T]:
         """Vector symbolic binding."""
         ...
 
-    @classmethod
+    @staticmethod
     @abstractmethod
-    def bundle(cls, x: npt.NDArray[T], y: npt.NDArray[T]) -> npt.NDArray[T]:
+    def bundle(x: npt.NDArray[T], y: npt.NDArray[T]) -> npt.NDArray[T]:
         """Vector symbolic bundling."""
         ...
 
-    @classmethod
+    @staticmethod
     @abstractmethod
-    def unbind(cls, x: npt.NDArray[T], y: npt.NDArray[T]) -> npt.NDArray[T]:
+    def unbind(x: npt.NDArray[T], y: npt.NDArray[T]) -> npt.NDArray[T]:
         """Vector symbolic unbinding."""
         ...
 
-    @classmethod
+    @staticmethod
     @abstractmethod
-    def similarity(cls, x: npt.NDArray[T], y: npt.NDArray[T]) -> float:
+    def similarity(x: npt.NDArray[T], y: npt.NDArray[T]) -> float:
         """Vector symbolic similarity."""
         ...
 
-    @classmethod
+    @staticmethod
     @abstractmethod
-    def new(cls, dim: int) -> "VSA[T]":
+    def new(dim: int) -> "VSA[T]":
         """Initialize a new vector."""
         ...
 
-    @classmethod
+    @staticmethod
     @abstractmethod
-    def from_array(cls, array: npt.NDArray[T]) -> "VSA[T]":
+    def from_array(array: npt.NDArray[T]) -> "VSA[T]":
         """Create a VSA from an array."""
         ...
 
