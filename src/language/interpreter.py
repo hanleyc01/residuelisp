@@ -10,7 +10,7 @@ from typing import Any, cast
 import numpy as np
 
 from syntax import KEYWORDS, OPERATORS, lex, parse
-from vsa import DEFAULT_MODULI, RHC, VSA, ArrayC128
+from vsa import RHC, VSA
 
 from .encoding import (
     AssociativeMemory,
@@ -507,7 +507,7 @@ def quote[T: VSA[Any]](
     Returns:
         A quote chunk.
     """
-    raise Exception("TODO")
+    raise NotImplementedError()
 
 
 # switch this to different
@@ -675,13 +675,13 @@ def rhc_mul[T: VSA[Any]](
     Returns:
         `RHC.encode(x) * RHC.encode(y) = RHC.encode(x * y)`
     """
-    raise Exception("TODO")
+    raise NotImplementedError()
 
 
 def rhc_div[T: VSA[Any]](
     rand: T, enc_env: EncodingEnvironment[T], eval_env: EvalEnvironment[T]
 ) -> T:
-    raise Exception("TODO")
+    raise NotImplementedError()
 
 
 def add[T: VSA[Any]](
@@ -995,7 +995,7 @@ def tuple_to_list[T: VSA[Any]](
             car_ = car(curr, enc_env, eval_env)
             xs.append(car_)
             curr = cdr(curr, enc_env, eval_env)
-        except:
+        except InterpreterError:
             break
 
     return xs
@@ -1210,7 +1210,7 @@ def evaluate_application[T: VSA[Any]](
         eval_rand = evaluate(rand, enc_env, eval_env)
         return make_cons(operator_v, eval_rand, enc_env)
 
-    raise Exception("TODO")
+    raise NotImplementedError()
 
 
 def evaluate[T: VSA[Any]](
@@ -1268,7 +1268,7 @@ def closest[T: VSA[Any]](value: T, enc_env: EncodingEnvironment[T]) -> str:
     """
     max_sim = 0.0
     max_word = "NONE"
-    for word in enc_env.codebook.keys():
+    for word in enc_env.codebook:
         sim = enc_env.vsa.similarity(enc_env.codebook[word].data, value.data)
         if sim > max_sim:
             max_sim = sim
@@ -1331,7 +1331,7 @@ def decode[T: VSA[Any]](
             enc_env.integer_encoding_scheme == IntegerEncodingScheme.RHCIntegers
         ) and is_true(check_int(expr, enc_env), enc_env):
             print("decoding rhc")
-            return decode_rhc(expr, enc_env)
+            return decode_rhc(cast(RHC, expr), enc_env)
 
         return closest(expr, enc_env)
     else:
