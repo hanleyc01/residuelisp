@@ -7,12 +7,10 @@ For the reference implementation, see
 from __future__ import annotations
 
 import math
-from typing import cast
+from typing import cast, override
 
 import numpy as np
-import numpy.typing as npt
 from numpy.fft import fft, ifft
-from typing_extensions import override
 
 from . import vsa
 from .common import ArrayF64
@@ -145,11 +143,11 @@ class HRR(vsa.VSA[np.float64]):
             The 'distance' between the left-hand side and the right-hand
             side, a value between -1 and 1.
         """
-        inner = np.dot(x, np.conj(y))
-        mag = 0.0
-        if (nrm := np.linalg.norm(x) * np.linalg.norm(y)) != 0.0:
-            mag = float(nrm)
-        return float(np.real(inner) / np.linalg.norm(x) * np.linalg.norm(y))
+        mag = float(np.linalg.norm(x) * np.linalg.norm(y))
+        if mag == 0.0:
+            return 0.0
+        else:
+            return float(np.dot(x, y) / mag)
 
     def __add__(self, rhs: HRR | float) -> HRR:
         """See `HRR.bundle`."""
