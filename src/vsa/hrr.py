@@ -7,7 +7,7 @@ For the reference implementation, see
 from __future__ import annotations
 
 import math
-from typing import cast, override
+from typing import Self, cast, override
 
 import numpy as np
 from numpy.fft import fft, ifft
@@ -29,8 +29,8 @@ class HRR(vsa.VSA[np.float64]):
     def __init__(self, data: ArrayF64) -> None:
         self.data = data
 
-    @staticmethod
-    def normal(size: int, sd: float | None = None) -> HRR:
+    @classmethod
+    def normal(cls, size: int, sd: float | None = None) -> Self:
         """Create a new HRR by sampling from the normal distribution.
 
         Args:
@@ -45,11 +45,11 @@ class HRR(vsa.VSA[np.float64]):
             sd = 1.0 / math.sqrt(size)
         data = np.random.normal(scale=sd, size=size)
         data /= np.linalg.norm(data)
-        return HRR(data)
+        return cls(data)
 
     @override
     @classmethod
-    def from_array(cls, array: ArrayF64) -> HRR:
+    def from_array(cls, array: ArrayF64) -> Self:
         """Create a new HRR from an array.
 
         Args:
@@ -62,7 +62,7 @@ class HRR(vsa.VSA[np.float64]):
 
     @override
     @classmethod
-    def new(cls, dim: int) -> HRR:
+    def new(cls, dim: int) -> Self:
         """Create a new vector-symbol.
 
         Args:
@@ -150,57 +150,64 @@ class HRR(vsa.VSA[np.float64]):
         else:
             return float(np.dot(x, y) / mag)
 
-    def __add__(self, rhs: HRR | float) -> HRR:
+    def __add__(self, rhs: HRR | float) -> Self:
         """See `HRR.bundle`."""
+        cls = type(self)
         if isinstance(rhs, HRR):
-            return HRR(HRR.bundle(self.data, rhs.data))
+            return cls(cls.bundle(self.data, rhs.data))
         else:
-            return HRR(self.data + rhs)
+            return cls(self.data + rhs)
 
-    def __radd__(self, rhs: HRR | float) -> HRR:
+    def __radd__(self, rhs: HRR | float) -> Self:
         """See `HRR.bundle`."""
+        cls = type(self)
         if isinstance(rhs, HRR):
-            return HRR(self.data + rhs.data)
+            return cls(cls.bundle(self.data, rhs.data))
         else:
-            return HRR(self.data + rhs)
+            return cls(self.data + rhs)
 
-    def __sub__(self, rhs: HRR | float) -> HRR:
+    def __sub__(self, rhs: HRR | float) -> Self:
         """Element-wise subtraction."""
+        cls = type(self)
         if isinstance(rhs, HRR):
-            return HRR(self.data - rhs.data)
+            return cls(self.data - rhs.data)
         else:
-            return HRR(self.data - rhs)
+            return cls(self.data - rhs)
 
-    def __mul__(self, rhs: HRR | float) -> HRR:
+    def __mul__(self, rhs: HRR | float) -> Self:
         """Scalar multiplication or `HRR.bind`."""
+        cls = type(self)
         if isinstance(rhs, HRR):
-            return HRR(HRR.bind(self.data, rhs.data))
+            return cls(cls.bind(self.data, rhs.data))
         else:
-            return HRR(self.data * rhs)
+            return cls(self.data * rhs)
 
-    def __rmul__(self, rhs: HRR | float) -> HRR:
+    def __rmul__(self, rhs: HRR | float) -> Self:
         """Scalar multiplication or `HRR.bind`."""
+        cls = type(self)
         if isinstance(rhs, HRR):
-            return HRR(HRR.bind(self.data, rhs.data))
+            return cls(cls.bind(self.data, rhs.data))
         else:
-            return HRR(self.data * rhs)
+            return cls(self.data * rhs)
 
-    def __truediv__(self, rhs: HRR | float) -> HRR:
+    def __truediv__(self, rhs: HRR | float) -> Self:
         """Scalar division or `HRR.unbind`."""
+        cls = type(self)
         if isinstance(rhs, HRR):
-            return HRR(HRR.unbind(self.data, rhs.data))
+            return cls(cls.unbind(self.data, rhs.data))
         elif isinstance(rhs, int):
-            return HRR(self.data / rhs)
+            return cls(self.data / rhs)
         else:
-            return HRR((self.data / rhs).astype(np.float64))
+            return cls((self.data / rhs).astype(np.float64))
 
-    def __invert__(self) -> HRR:
+    def __invert__(self) -> Self:
         """See `HRR.inv`."""
-        return HRR(HRR.inv(self.data))
+        cls = type(self)
+        return cls(cls.inv(self.data))
 
-    def __neg__(self) -> HRR:
+    def __neg__(self) -> Self:
         """Element-wise negation."""
-        return HRR(-self.data)
+        return type(self)(-self.data)
 
     def magnitude(self) -> float:
         """The magnitude of the raw vector."""
@@ -225,7 +232,7 @@ class HRR(vsa.VSA[np.float64]):
 
     @override
     def __str__(self) -> str:
-        return f"HRR({self.data})"
+        return f"{type(self).__name__}({self.data})"
 
     @override
     def __hash__(self) -> int:

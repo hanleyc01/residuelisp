@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import cmath
 import math
+from typing import Self
 
 import numpy as np
 
@@ -28,11 +29,11 @@ class FHRR(VSA[np.complex128]):
         self.data = data
 
     @classmethod
-    def from_array(cls, array: ArrayC128) -> FHRR:
+    def from_array(cls, array: ArrayC128) -> Self:
         return cls(array)
 
-    @staticmethod
-    def uniform(dim: int) -> FHRR:
+    @classmethod
+    def uniform(cls, dim: int) -> Self:
         """Initialize a new FHRR sampled from the uniform distribution.
 
         Args:
@@ -42,10 +43,10 @@ class FHRR(VSA[np.complex128]):
             A new FHRR vector symbol.
         """
         thetas = np.random.uniform(high=math.pi * 2, size=dim)
-        return FHRR(np.exp(thetas * cmath.sqrt(-1)))
+        return cls(np.exp(thetas * cmath.sqrt(-1)))
 
-    @staticmethod
-    def from_hrr(x: HRR) -> FHRR:
+    @classmethod
+    def from_hrr(cls, x: HRR) -> Self:
         """Convert an HRR into an FHRR.
 
         Args:
@@ -55,10 +56,10 @@ class FHRR(VSA[np.complex128]):
             An FHRR vector symbol.
         """
         complex_array = np.ndarray.astype(np.fft.fft(x.data), np.complex128)
-        return FHRR(complex_array)
+        return cls(complex_array)
 
     @classmethod
-    def new(cls, dim: int) -> FHRR:
+    def new(cls, dim: int) -> Self:
         """Static method creating a new FHRR using `FHRR.uniform`.
 
         Args:
@@ -136,55 +137,62 @@ class FHRR(VSA[np.complex128]):
         """
         return float(np.dot(np.conjugate(x.T), y).real / x.size)
 
-    def __add__(self, rhs: FHRR | float) -> FHRR:
+    def __add__(self, rhs: FHRR | float) -> Self:
         """See `FHRR.bundle`."""
+        cls = type(self)
         if isinstance(rhs, FHRR):
-            return FHRR(FHRR.bundle(self.data, rhs.data))
+            return cls(cls.bundle(self.data, rhs.data))
         else:
-            return FHRR(self.data + rhs)
+            return cls(self.data + rhs)
 
-    def __radd__(self, rhs: FHRR | float) -> FHRR:
+    def __radd__(self, rhs: FHRR | float) -> Self:
         """See `FHRR.bundle`."""
+        cls = type(self)
         if isinstance(rhs, FHRR):
-            return FHRR(self.data + rhs.data)
+            return cls(cls.bundle(self.data, rhs.data))
         else:
-            return FHRR(self.data + rhs)
+            return cls(self.data + rhs)
 
-    def __sub__(self, rhs: FHRR | float) -> FHRR:
+    def __sub__(self, rhs: FHRR | float) -> Self:
         """Element-wise subtraction."""
+        cls = type(self)
         if isinstance(rhs, FHRR):
-            return FHRR(self.data - rhs.data)
+            return cls(self.data - rhs.data)
         else:
-            return FHRR(self.data - rhs)
+            return cls(self.data - rhs)
 
-    def __mul__(self, rhs: FHRR | float) -> FHRR:
+    def __mul__(self, rhs: FHRR | float) -> Self:
         """See `FHRR.bind`."""
+        cls = type(self)
         if isinstance(rhs, FHRR):
-            return FHRR(FHRR.bind(self.data, rhs.data))
+            return cls(cls.bind(self.data, rhs.data))
         else:
-            return FHRR(self.data * rhs)
+            return cls(self.data * rhs)
 
-    def __rmul__(self, rhs: FHRR | float) -> FHRR:
+    def __rmul__(self, rhs: FHRR | float) -> Self:
         """See `FHRR.bind`."""
+        cls = type(self)
         if isinstance(rhs, FHRR):
-            return FHRR(FHRR.bind(self.data, rhs.data))
+            return cls(cls.bind(self.data, rhs.data))
         else:
-            return FHRR(self.data * rhs)
+            return cls(self.data * rhs)
 
-    def __truediv__(self, rhs: FHRR | float) -> FHRR:
+    def __truediv__(self, rhs: FHRR | float) -> Self:
         """See `FHRR.unbind`."""
+        cls = type(self)
         if isinstance(rhs, FHRR):
-            return FHRR(FHRR.unbind(self.data, rhs.data))
+            return cls(cls.unbind(self.data, rhs.data))
         else:
-            return FHRR(self.data / rhs)
+            return cls(self.data / rhs)
 
-    def __invert__(self) -> FHRR:
+    def __invert__(self) -> Self:
         """See `FHRR.inv`."""
-        return FHRR(FHRR.inv(self.data))
+        cls = type(self)
+        return cls(cls.inv(self.data))
 
-    def __neg__(self) -> FHRR:
+    def __neg__(self) -> Self:
         """Element-wise negation of each of the elements of the vector-symbol."""
-        return FHRR(-self.data)
+        return type(self)(-self.data)
 
     def magnitude(self) -> float:
         """The magnitude of the vector-symbol."""
@@ -212,7 +220,7 @@ class FHRR(VSA[np.complex128]):
             raise TypeError(f"Innapropriate argument type {type(other)}")
 
     def __str__(self) -> str:
-        return f"FHRR({self.data})"
+        return f"{type(self).__name__}({self.data})"
 
     def __hash__(self) -> int:
         return hash(self.data.tobytes())
