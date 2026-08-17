@@ -1,308 +1,222 @@
 """Implementation of Residue Hyperdimensional Computing (RHC)."""
 
-from __future__ import annotations
-
-import cmath
-import math
-import sys
-from typing import Callable, Mapping, cast
+from typing import ClassVar
 
 import numpy as np
-import numpy.random
-import numpy.typing as npt
-from numpy.fft import fft, ifft
+from more_itertools import is_prime
 
-from .common import ArrayC128
-from .vsa import VSA
-
-DEFAULT_MODULI = [3, 5, 7, 11]
+from .common import ArrayC128, ArrayI64
+from .fhrr import FHRR
 
 
-def z(dim: int, distr: Callable[[], float]) -> npt.NDArray[np.complex128]:
-    z = np.zeros(shape=(dim,), dtype=np.complex128)
-    for i in range(dim):
-        z[i] = np.exp(cmath.sqrt(-1) * distr())
-    return z
+class RHC(FHRR):
+    """Residue Hyperdimensional Computing (RHC) vector symbolic architecture."""
 
+    data: ArrayC128
+    moduli: ClassVar[list[int]] = [3, 5, 7, 11]
+    basis: ClassVar[list[ArrayC128]] = []
+    basis_exponents: ClassVar[list[ArrayI64]] = []
+    anti_basis: ClassVar[list[ArrayC128]] = []
 
-def fpe(dim: int, x: int, distr: Callable[[], float]) -> npt.NDArray[np.complex128]:
-    """Fractional Power Encoding, from Def. 2 in Kymn et al."""
-    return z(dim, distr) ** x
+    @classmethod
+    def set_moduli(cls, moduli: list[int]) -> None:
+        """Set the moduli for the RHC basis.
 
+        Note that, if one wants to perform multiplication, ideally
+        the moduli should be chosen to be coprime.
 
-def fpe_mod_m(dim: int, x: int, mod: int) -> npt.NDArray[np.complex128]:
-    phases = np.unique(2 * math.pi * np.arange(mod, dtype=np.float64) / mod)
-    distr = np.vectorize(lambda: np.random.choice(phases))
-    return fpe(dim, x, distr)
-
-
-def fpe_kernel(x: npt.NDArray[np.complex128], y: npt.NDArray[np.complex128]) -> float:
-    return float((x.dot(np.conj(y)).real) / x.shape[0])
-
-
-class RHC(VSA[np.complex128]):
-    codebook: dict[int, npt.NDArray[np.complex128]] = {}
-    data: npt.NDArray[np.complex128]
-    moduli: list[int] = DEFAULT_MODULI
-    z_ms: list[npt.NDArray[np.complex128]] = []
-    dtype = np.complex128
-
-    def __init__(
-        self,
-        data: npt.NDArray[np.complex128],
-        moduli: list[int] = DEFAULT_MODULI,
-        z_m: list[npt.NDArray[np.complex128]] | None = None,
-    ) -> None:
-        self.data = data
-        self.moduli = moduli
-        if z_m is None:
-            self.z_ms = [fpe_mod_m(data.size, 1, mod) for mod in self.moduli]
-        else:
-            self.z_ms = z_m
+        Args:
+        -   moduli (list[int]): The moduli for the RHC basis.
+        """
+        cls.moduli = moduli
 
     @staticmethod
-    def encode(dim: int, x: int, moduli: list[int] = DEFAULT_MODULI) -> RHC:
-        if moduli != RHC.moduli:
-            RHC.moduli = moduli
-            RHC.z_ms = [fpe_mod_m(dim, 1, mod) for mod in RHC.moduli]
+    def generate_base_vector(
+        rng: np.random.Generator, modulus: int, dim: int
+    ) -> tuple[ArrayC128, ArrayI64]:
+        """Generates an RHC base vector in the frequency domain.
 
-        if len(RHC.z_ms) != len(RHC.moduli) or not all(
-            z_m.size == dim for z_m in RHC.z_ms
-        ):
-            RHC.z_ms = [fpe_mod_m(dim, 1, mod) for mod in RHC.moduli]
+        Args:
+        -   rng (np.random.Generator): The random number generator.
+        -   modulus (int): The modulus of the base vector.
+        -   dim (int): The dimension of the base vector.
 
-        data: npt.NDArray[np.complex128] = np.ones(shape=(dim,), dtype=np.complex128)
-        for z_m in RHC.z_ms:
-            data = data * (z_m**x)
-        RHC.codebook[x] = data
-        return RHC(data)
+        Returns:
+            An RHC base vector in the frequency domain.
+        """
+
+        k_choices = np.zeros(dim, dtype=int)
+        k_choices[0] = 0
+
+        half_len = dim // 2
+        k_choices[1:half_len] = rng.choice(modulus, half_len - 1)
+
+        if dim % 2 == 0:
+            k_choices[half_len] = (
+                0 if rng.random() > 0.5 else (modulus // 2 if modulus % 2 == 00 else 0)
+            )
+            k_choices[half_len + 1 :] = -k_choices[half_len - 1 : 0 : -1]
+        else:
+            k_choices[half_len + 1 :] = -k_choices[half_len:0:-1]
+
+        phases = 2 * np.pi * k_choices / modulus
+        z_freq = np.exp(1j * phases)
+        return z_freq, k_choices
+
+    @classmethod
+    def generate_basis(cls, dim: int) -> None:
+        rng = np.random.default_rng()
+        generated = [cls.generate_base_vector(rng, m, dim) for m in cls.moduli]
+        cls.basis = [z for z, _ in generated]
+        cls.basis_exponents = [k for _, k in generated]
+        cls.anti_basis = []
 
     @staticmethod
-    def bind(
-        x: npt.NDArray[np.complex128], y: npt.NDArray[np.complex128]
-    ) -> npt.NDArray[np.complex128]:
-        return x * y
+    def generate_anti_base_vector(exponents: ArrayI64, modulus: int) -> ArrayC128:
+        if not is_prime(modulus):
+            raise ValueError(f"modulus {modulus} is not prime")
 
-    @staticmethod
-    def unbind(
-        x: npt.NDArray[np.complex128], y: npt.NDArray[np.complex128]
-    ) -> npt.NDArray[np.complex128]:
-        return RHC.bind(x, np.conj(y))
+        inverse = np.array(
+            [0] + [pow(t, -1, modulus) for t in range(1, modulus)], dtype=np.int64
+        )
 
-    @staticmethod
-    def bundle(
-        x: npt.NDArray[np.complex128], y: npt.NDArray[np.complex128]
-    ) -> npt.NDArray[np.complex128]:
-        return x + y
+        return np.exp(2j * np.pi * inverse[exponents % modulus] / modulus).astype(
+            np.complex128
+        )
 
-    @staticmethod
-    def inv(x: npt.NDArray[np.complex128]) -> npt.NDArray[np.complex128]:
-        return np.conjugate(x)
+    @classmethod
+    def generate_anti_basis(cls) -> None:
+        if cls.anti_basis:
+            return
+        if not cls.basis_exponents:
+            raise ValueError("basis must be generated before anti-basis")
 
-    @staticmethod
-    def from_array(data: npt.NDArray[np.complex128]) -> RHC:
-        raise Exception("TODO")
+        if not cls.basis:
+            raise ValueError("basis must be generated before anti-basis")
 
-    @staticmethod
-    def new(dim: int) -> RHC:
-        raise NotImplementedError()
+        cls.anti_basis = [
+            cls.generate_anti_base_vector(exponents, m)
+            for exponents, m in zip(cls.basis_exponents, cls.moduli, strict=True)
+        ]
 
-    @staticmethod
-    def similarity(
-        x: npt.NDArray[np.complex128], y: npt.NDArray[np.complex128]
-    ) -> float:
-        sim = fpe_kernel(x, y)
-        return sim
+    @classmethod
+    def number(
+        cls,
+        num: int,
+        dim: int,
+    ) -> "RHC":
+        """Create an RHC vector from a number.
 
-    def __str__(self) -> str:
-        return f"RHC({self.data=}, {self.moduli})"
+        Args:
+        -   num (int): The number to convert.
+        -   dim (int): The dimension of the vector.
 
-    def __hash__(self) -> int:
-        return hash(self.data.tobytes())
+        Returns:
+            An RHC vector representing the number.
 
-    def __add__(
-        self, rhs: RHC | VSA[np.complex128] | VSA[np.float64] | float | int | complex
-    ) -> RHC:
-        if isinstance(rhs, RHC):
-            return RHC(
-                RHC.bundle(self.data, rhs.data), moduli=self.moduli, z_m=self.z_ms
-            )
-        if isinstance(rhs, VSA):
-            return RHC(self.data + rhs.data, moduli=self.moduli, z_m=self.z_ms)
-        elif isinstance(rhs, float) or isinstance(rhs, int) or isinstance(rhs, complex):
-            return RHC(self.data + rhs, moduli=self.moduli)
-        else:
-            raise TypeError(f"Inappropriate argument type: {type(rhs)}")
+        Raises:
+        -   ValueError: If the basis dimension does not match the dimension of the vector.
+        """
 
-    def __sub__(
-        self, rhs: RHC | VSA[np.complex128] | VSA[np.float64] | float | int | complex
-    ) -> RHC:
-        if isinstance(rhs, RHC):
-            return RHC(
-                self.data - rhs.data,
-                moduli=self.moduli,
-            )
-        if isinstance(rhs, VSA):
-            return RHC(
-                self.data - rhs.data,
-                moduli=self.moduli,
-            )
-        elif isinstance(rhs, float) or isinstance(rhs, int) or isinstance(rhs, complex):
-            return RHC(
-                self.data - rhs,
-                moduli=self.moduli,
-            )
-        else:
-            raise TypeError(f"Inappropriate argument type: {type(rhs)}")
+        if not cls.basis:
+            cls.generate_basis(dim)
 
-    def __radd__(
-        self, rhs: RHC | VSA[np.complex128] | VSA[np.float64] | float | int | complex
-    ) -> RHC:
-        if isinstance(rhs, RHC):
-            return RHC(
-                RHC.bundle(self.data, rhs.data),
-                moduli=self.moduli,
-            )
-        elif isinstance(rhs, VSA):
-            return RHC(
-                self.data + rhs.data,
-                moduli=self.moduli,
-            )
-        elif isinstance(rhs, float) or isinstance(rhs, int) or isinstance(rhs, complex):
-            return RHC(
-                rhs + self.data,
-                moduli=self.moduli,
-            )
-        else:
-            raise TypeError(f"Inappropriate argument type: {type(rhs)}")
+        basis = cls.basis
 
-    def __mul__(self, rhs: RHC | float | int | complex) -> RHC:
-        if isinstance(rhs, RHC):
-            return RHC(
-                RHC.bind(self.data, rhs.data),
-                moduli=self.moduli,
-            )
-        elif isinstance(rhs, float) or isinstance(rhs, int) or isinstance(rhs, complex):
-            return RHC(
-                self.data * rhs,
-                moduli=self.moduli,
-            )
-        else:
-            raise TypeError(f"Inappropriate argument type: {type(rhs)}")
+        if basis[0].shape[0] != dim:
+            raise ValueError("basis dimension must match dim")
 
-    def __rmul__(self, rhs: RHC | float | int | complex) -> RHC:
-        if isinstance(rhs, RHC):
-            return RHC(
-                RHC.bind(self.data, rhs.data),
-                moduli=self.moduli,
-            )
-        elif isinstance(rhs, float) or isinstance(rhs, int) or isinstance(rhs, complex):
-            return RHC(
-                rhs * self.data,
-                moduli=self.moduli,
-            )
-        else:
-            raise TypeError(f"Inappropriate argument type: {type(rhs)}")
+        rhc_num = basis[0] ** num
+        for i in range(1, len(basis)):
+            rhc_num = cls.bind(rhc_num, basis[i] ** num)
 
-    def __truediv__(self, rhs: RHC | float | int | complex) -> RHC:
-        if isinstance(rhs, RHC):
-            return RHC(
-                RHC.unbind(self.data, rhs.data),
-                moduli=self.moduli,
-            )
-        elif isinstance(rhs, float) or isinstance(rhs, int) or isinstance(rhs, complex):
-            return RHC(self.data / rhs, moduli=self.moduli)
-        else:
-            raise TypeError(f"Inappropriate argument type: {type(rhs)}")
+        return cls(rhc_num)
 
-    def __invert__(self) -> RHC:
-        return RHC(RHC.inv(self.data), moduli=self.moduli)
+    @classmethod
+    def residue_add(cls, x: ArrayC128, y: ArrayC128) -> ArrayC128:
+        """Perform RHC arithmetical addition.
 
-    def __neg__(self) -> RHC:
-        return RHC(-self.data, moduli=self.moduli)
+        Args:
+        -   x (ArrayC128): The first vector.
+        -   y (ArrayC128): The second vector.
 
-    def __matmul__(self, other: RHC | ArrayC128) -> float | ArrayC128:
-        if isinstance(other, RHC):
-            return self.data @ other.data
-        elif isinstance(other, np.ndarray) and other.dtype == np.complex128:
-            if len(other.shape) == 2:
-                return (self.data @ other).astype(np.complex128)
-            else:
-                return self.data @ other
-        else:
-            raise TypeError(f"Innapropriate argument type {type(other)}")
+        Returns:
+            The result of the addition.
+        """
+        return cls.bind(x, y)
 
-    def sim(self, rhs: RHC | ArrayC128) -> float:
-        if isinstance(rhs, RHC):
-            return RHC.similarity(self.data, rhs.data)
-        elif isinstance(rhs, np.ndarray) and rhs.dtype == np.complex128:
-            return RHC.similarity(self.data, rhs)
-        else:
-            raise TypeError(f"Inappropriate argument type: {type(rhs)}")
+    @classmethod
+    def residue_sub(cls, x: ArrayC128, y: ArrayC128) -> ArrayC128:
+        """Perform RHC arithmetical subtraction.
 
-    def __pow__(self, rhs: int) -> RHC:
-        return RHC(self.data**rhs, moduli=self.moduli)
+        Args:
+        -   x (ArrayC128): The first vector.
+        -   y (ArrayC128): The second vector.
 
+        Returns:
+            The result of the subtraction.
+        """
+        return cls.unbind(x, y)
 
-def crt(residues: list[int], moduli: list[int]) -> int:
-    """Chinese remainder theorem decoding of residues given moduli."""
-    import math
+    @classmethod
+    def factor(cls, x: ArrayC128) -> ArrayC128:
+        r"""Recover the per-modulus components $m_k u_i$ for each modulus $m_k$ and feature $u_i$
+        in the input vector `x`.
 
-    M = math.prod(moduli)
-    x = 0
-    for a_i, m_i in zip(residues, moduli):
-        M_i = M // m_i
-        t_i = pow(M_i, -1, m_i)
-        x += a_i * M_i * t_i
-    return x % M
+        Args:
+        -   x (ArrayC128): The input vector.
 
+        Returns:
+            The per-modulus components of the input vector, $\mathbb{C}^{n \times d}$,
+            where $n$ is the number of moduli and $d$ the number of features.
+        """
 
-# generate codebooks for moduli
-def _get_codebooks(
-    moduli: list[int], z_ms: list[npt.NDArray[np.complex128]]
-) -> Mapping[int, npt.NDArray[np.complex128]]:
-    codebooks = {}
-    for i, mod in enumerate(moduli):
-        codes = np.zeros(shape=(z_ms[0].size, mod), dtype=np.complex128)
-        for j in range(mod):
-            codes[:, j] = z_ms[i] ** j
-        codebooks[mod] = codes
-    return codebooks
+        assert cls.moduli and cls.anti_basis and cls.basis_exponents
+        assert all(is_prime(m) for m in cls.moduli)
 
+        n = len(cls.moduli)
+        d = x.shape[0] // n
 
-def _act(v: npt.NDArray[np.complex128]) -> npt.NDArray[np.complex128]:
-    mag = np.abs(v)
-    return np.divide(v, mag, where=(mag != 0))
+        out = np.zeros((n, d), dtype=cls.dtype)
 
+        return out
 
-def resonator_decoding(
-    residue_number: RHC, max_iters: int = 200
-) -> tuple[
-    list[dict[int, npt.NDArray[np.complex128]]],
-    Mapping[int, npt.NDArray[np.complex128]],
-]:
-    """Resonator decoding for RHC."""
-    data = residue_number.data
-    z_ms = residue_number.z_ms
-    moduli = residue_number.moduli
-    codebooks = _get_codebooks(moduli, z_ms)
+    @classmethod
+    def residue_mul(cls, x: ArrayC128, y: ArrayC128) -> ArrayC128:
+        r"""Perform RHC multiplicative binding.
 
-    factors = {}
-    for mod, book in codebooks.items():
-        factors[mod] = cast(npt.NDArray[np.complex128], np.sum(book, axis=1))
+        RHC multiplicative binding is the operation, denoted by $\otimes$, such
+        that:
+        $$
+            RHC(x \times y) = RHC(x) \otimes RHC(y).
+        $$
+        """
+        raise NotImplementedError("TODO")
+        # assert cls.moduli and cls.anti_basis and cls.basis_exponents
+        # assert all(is_prime(m) for m in cls.moduli)
 
-    iters = [factors]
-    for i in range(max_iters):
-        prev_it = iters[-1]
-        curr_it = {}
-        for mod in moduli:
-            other_fs = np.array(
-                [other_factor for omod, other_factor in prev_it.items() if omod != mod]
-            ).T
-            other_fs = np.prod(np.conj(other_fs), axis=1)
-            raw_guess = data * other_fs
-            cbook = codebooks[mod]
-            curr_it[mod] = _act(cbook @ np.conj(cbook).T @ (raw_guess))
-        iters.append(curr_it)
+        # xs = cls.factor(x)
+        # ys = cls.factor(y)
 
-    return iters, codebooks
+        # out = np.ones_like(xs, dtype=cls.dtype)
+        # for k, m in enumerate(cls.moduli):
+        #     prod = cls.multiply_residue_phases(xs[k], ys[k], m)
+        #     prod = cls.multiply_residue_phases(prod, cls.anti_basis[k], m)
+        #     out = np.multiply(out, prod)
+
+        # return cast(ArrayC128, out)
+
+    @classmethod
+    def residue_div(cls, x: ArrayC128, y: ArrayC128) -> ArrayC128:
+        r"""Perform RHC division binding.
+
+        RHC multiplicative binding is the operation, denoted by $\otimes^{-1]$, such
+        that:
+        $$
+            RHC(x / y) \approx RHC(x) \otimes^{-1} RHC(y).
+        $$
+
+        Since division is not well-defined for the residue-number encoding,
+        we will have to make do with a partial mapping.
+        """
+        raise NotImplementedError("TODO")
