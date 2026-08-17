@@ -9,11 +9,29 @@ from typing import ClassVar, Self
 import numpy as np
 import numpy.typing as npt
 
+__all__ = ["VSA"]
+
 
 class VSA[T: np.generic](metaclass=ABCMeta):
     """Abstract base class of all VSA implementations.
 
-    We define this class in order
+    All VSA's must implement the following methods:
+    ```
+    # Vector symbolic binding
+    def bind(x: npt.NDArray[T], y: npt.NDArray[T]) -> npt.NDArray[T]
+    # Vector symbolic bundling or superposition
+    def bundle(x: npt.NDArray[T], y: npt.NDArray[T]) -> npt.NDArray[T]
+    # Vector symbolic unbinding
+    def unbind(x: npt.NDArray[T], y: npt.NDArray[T]) -> npt.NDArray[T]
+    # Vector similarity kernel
+    def similarity(x: npt.NDArray[T], y: npt.NDArray[T]) -> float
+    # Generation of a new vector
+    def new(cls, dim: int) -> Self
+    # Generation of a new VSA vector from an array
+    def from_array(cls, array: npt.NDArray[T]) -> Self
+    # Conversion of the VSA vector to a hash value
+    def __hash__(self) -> int
+    ```
     """
 
     data: npt.NDArray[T]

@@ -14,6 +14,8 @@ from .common import ArrayC128
 from .hrr import HRR
 from .vsa import VSA
 
+__all__ = ["FHRR"]
+
 
 class FHRR(VSA[np.complex128]):
     """Holographic reduced representations in the frequency domain.

@@ -8,6 +8,8 @@ from more_itertools import is_prime
 from .common import ArrayC128, ArrayI64
 from .fhrr import FHRR
 
+__all__ = ["RHC"]
+
 
 class RHC(FHRR):
     """Residue Hyperdimensional Computing (RHC) vector symbolic architecture."""
