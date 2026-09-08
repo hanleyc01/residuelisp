@@ -1,4 +1,4 @@
-./.venv/bin/black ./src/*
-./.venv/bin/isort ./src/*
-./.venv/bin/mypy --strict ./src 
-./.venv/bin/pytest ./src/tests
+uvx ruff format .
+./.venv/bin/mypy --strict ./src
+./.venv/bin/basedpyright
+# ./.venv/bin/pytest ./src/tests

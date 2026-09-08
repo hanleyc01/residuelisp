@@ -9,3 +9,8 @@ wheels/
 # Virtual environments
 .venv
 .pytest_cache
+
+# Generated files
+.claude
+.mypy_cache
+.ruff_cache

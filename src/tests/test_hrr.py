@@ -1,5 +1,7 @@
 from vsa import HRR
 
+# TODO: make these tests deterministic
+
 
 def test_hrr_sim() -> None:
     dim = 100

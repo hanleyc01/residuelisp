@@ -346,13 +346,12 @@ def encode_rhc_integer[U: VSA[Any]](cont: str, env: EncodingEnvironment[U]) -> U
 
     else:
         if len(env.roots) == 0 or len(env.phis) == 0 or len(env.moduli) == 0:
-            code = RHC.encode(env.dim, conti)
+            code = RHC.number(conti, env.dim)
             return env.vsa.bundle(code, env.codebook["__int"])  # type: ignore
         else:
-            code = RHC.encode(
-                env.dim,
+            code = RHC.number(
                 conti,
-                moduli=env.moduli,
+                env.dim,
             )
             return env.vsa.bundle(code, env.codebook["__int"])  # type: ignore
 

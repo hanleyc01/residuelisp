@@ -1,7 +1,7 @@
 import argparse
 
+from language import EncodingEnvironment, IntegerEncodingScheme, encode, interpret
 from perf import perf
-from language import (EncodingEnvironment, IntegerEncodingScheme, encode, interpret)
 from syntax import lex, parse
 from vsa import FHRR
 

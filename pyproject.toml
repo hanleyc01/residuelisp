@@ -13,9 +13,17 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "basedpyright>=1.39.10",
     "black>=25.1.0",
     "isort>=6.0.1",
     "mypy>=1.15.0",
     "pdoc>=15.0.3",
     "pytest>=8.3.5",
 ]
+
+[tool.basedpyright]
+include = ["src"]
+pythonVersion = "3.13"
+typeCheckingMode = "standard"
+venvPath = "."
+venv = ".venv"
